@@ -1,0 +1,85 @@
+import type * as mediasoup from 'mediasoup';
+import type { Producer, Consumer, WebRtcTransport, PlainTransport } from 'mediasoup/node/lib/types.js';
+import type { ChildProcess } from 'child_process';
+import type { HLSManager } from '../hls/HLSManager.js';
+
+// Room state
+export interface Room {
+    id: string;
+    router: mediasoup.types.Router;
+    producers: Map<string, ProducerInfo>; // peerId -> ProducerInfo
+    hlsPipeline: HLSManager | null; // Store the actual HLSManager instance
+}
+
+// Producer information
+export interface ProducerInfo {
+    peerId: string;
+    videoProducer: Producer | null;
+    audioProducer: Producer | null;
+    transport: WebRtcTransport;
+}
+
+// Consumer information
+export interface ConsumerInfo {
+    peerId: string;
+    videoConsumer: Consumer | null;
+    audioConsumer: Consumer | null;
+    transport: WebRtcTransport;
+}
+
+// HLS Pipeline state
+export interface HLSPipeline {
+    ffmpegProcess: ChildProcess | null;
+    plainTransports: Map<string, PlainTransportPair>; // peerId -> transport pair
+    consumers: Map<string, ConsumerPair>; // peerId -> consumer pair
+    sdpFilePath: string;
+    playlistPath: string;
+}
+
+// PlainTransport pair for audio and video
+export interface PlainTransportPair {
+    peerId: string;
+    videoTransport: PlainTransport;
+    audioTransport: PlainTransport;
+    videoPorts: PortPair;
+    audioPorts: PortPair;
+}
+
+// Consumer pair for audio and video
+export interface ConsumerPair {
+    peerId: string;
+    videoConsumer: Consumer | null;
+    audioConsumer: Consumer | null;
+}
+
+// Port pair for RTP and RTCP
+export interface PortPair {
+    rtp: number;
+    rtcp: number;
+}
+
+// Port allocation for a user
+export interface UserPorts {
+    peerId: string;
+    video: PortPair;
+    audio: PortPair;
+}
+
+// Socket.IO event types
+export interface ServerToClientEvents {
+    roomProducersChanged: (data: { producers: { peerId: string; videoProducerId?: string; audioProducerId?: string }[] }) => void;
+}
+
+export interface ClientToServerEvents {
+    createRoom: (callback: (data: { roomId?: string; peerId?: string; error?: string }) => void) => void;
+    joinRoom: (data: { roomId: string }, callback: (data: { roomId?: string; peerId?: string; error?: string }) => void) => void;
+    getRouterRtpCapabilities: (callback: (data: { rtpCapabilities?: any; error?: string }) => void) => void;
+    createProducerTransport: (callback: (data: any) => void) => void;
+    connectProducerTransport: (data: { dtlsParameters: any }, callback: (data: { connected?: boolean; error?: string }) => void) => void;
+    produce: (data: { kind: 'audio' | 'video'; rtpParameters: any }, callback: (data: { id?: string; error?: string }) => void) => void;
+    stopProducing: (callback: (data: { stopped?: boolean; error?: string }) => void) => void;
+    listProducers: (callback: (data: { producers?: any[]; error?: string }) => void) => void;
+    createConsumerTransport: (callback: (data: any) => void) => void;
+    connectConsumerTransport: (data: { dtlsParameters: any }, callback: (data: { connected?: boolean; error?: string }) => void) => void;
+    consume: (data: { producerId: string; rtpCapabilities: any }, callback: (data: any) => void) => void;
+}
