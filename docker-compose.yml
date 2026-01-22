@@ -3,8 +3,8 @@ version: '3.8'
 services:
   backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: mediasoup-backend
     restart: unless-stopped
     network_mode: host # Critical for WebRTC performance & port range management
