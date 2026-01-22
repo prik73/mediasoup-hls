@@ -10,6 +10,7 @@ import { FFmpegProcess } from './FFmpegProcess.js';
 import { logger } from '../utils/logger.js';
 import type { HLSPipeline, PlainTransportPair, ConsumerPair, UserPorts, ProducerInfo } from '../state/types.js';
 import { hlsConfig } from '../config/mediasoup.config.js';
+import type { Server as SocketIOServer } from 'socket.io';
 
 const execAsync = promisify(exec);
 
@@ -22,10 +23,12 @@ export class HLSManager {
     private portAllocator: PortAllocator;
     private currentPipeline: HLSPipeline | null = null;
     private roomId: string;
+    private io: SocketIOServer;
 
-    constructor(router: Router, roomId: string) {
+    constructor(router: Router, roomId: string, io: SocketIOServer) {
         this.router = router;
         this.roomId = roomId;
+        this.io = io;
         this.portAllocator = new PortAllocator(hlsConfig.basePort, hlsConfig.maxPort);
     }
 
@@ -194,6 +197,17 @@ playlist.m3u8
         this.currentPipeline.consumers = consumers;
 
         logger.info('HLS pipeline restarted successfully');
+
+        // Emit Socket.IO event to notify watch pages
+        const eventData = {
+            roomId: this.roomId,
+            timestamp: Date.now(),
+            userCount: fullProducers.length
+        };
+        logger.info(`[Socket.IO] Emitting 'hlsRestarted' event to room '${this.roomId}'`);
+        logger.info(`[Socket.IO] Event data:`, eventData);
+        this.io.to(this.roomId).emit('hlsRestarted', eventData);
+        logger.info(`[Socket.IO] Event emitted successfully`);
     }
 
     /**
@@ -271,6 +285,12 @@ playlist.m3u8
             const transportPair = transports.get(producer.peerId);
             if (!transportPair) continue;
             if (!producer.videoProducer || !producer.audioProducer) continue;
+
+            // Check if producers are still open (prevents race condition on disconnect)
+            if (producer.videoProducer.closed || producer.audioProducer.closed) {
+                logger.warn(`Producer for peer ${producer.peerId} is closed, skipping`);
+                continue;
+            }
 
             // Create video consumer (PAUSED)
             const videoConsumer = await transportPair.videoTransport.consume({

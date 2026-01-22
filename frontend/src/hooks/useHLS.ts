@@ -26,7 +26,11 @@ export function useHLS({ playlistUrl, autoPlay = true }: UseHLSProps) {
         }
 
         const video = videoRef.current;
+
+        // Reset state for clean initialization
         setIsLoading(true);
+        setError(null);
+        setIsPlaying(false);
 
         logger.info('[HLS] Initializing HLS player for:', playlistUrl);
         console.log('[HLS] Full playlist URL:', playlistUrl);
@@ -53,15 +57,7 @@ export function useHLS({ playlistUrl, autoPlay = true }: UseHLSProps) {
                 }
             });
 
-            hls.on(Hls.Events.ExCLU, () => {
-                // handle buffering
-            });
-            // Add buffering listeners
-            hls.on(Hls.Events.BUFFER_STALLED, () => setIsLoading(true));
-            hls.on(Hls.Events.FRAG_BUFFERED, () => setIsLoading(false));
-            hls.on(Hls.Events.FRAG_LOADED, () => setIsLoading(false));
-
-            hls.on(Hls.Events.ERROR, (event, data) => {
+            hls.on(Hls.Events.ERROR, (_event, data) => {
                 logger.error('HLS error:', { type: data.type, details: data.details, fatal: data.fatal });
                 setIsLoading(false); // Stop loading on error so we show error message
 
@@ -69,8 +65,14 @@ export function useHLS({ playlistUrl, autoPlay = true }: UseHLSProps) {
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
                             logger.error('Fatal network error, trying to recover...');
-                            setError('Network error loading stream. Retrying...');
-                            hls.startLoad();
+
+                            // Check if it's a 404 (playlist not found = no users streaming)
+                            if (data.details === 'manifestLoadError' && data.response?.code === 404) {
+                                setError('No users are currently streaming in this room');
+                            } else {
+                                setError('Network error loading stream. Retrying...');
+                                hls.startLoad();
+                            }
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
                             logger.error('Fatal media error, trying to recover...');

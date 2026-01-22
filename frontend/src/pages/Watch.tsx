@@ -1,16 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import HLSPlayer from '../components/HLSPlayer';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { useHLSStore } from '../stores/hlsStore';
+import { useWatchRoom } from '../hooks/useWatchRoom';
 
 export default function Watch() {
     const { roomId: urlRoomId } = useParams<{ roomId?: string }>();
     const navigate = useNavigate();
     const [roomId, setRoomId] = useState('');
     const [isWatching, setIsWatching] = useState(false);
+
+    // Use Zustand stores for global state
+    const { hlsKey, isTransitioning } = useHLSStore();
+
+    // Use custom hook for Socket.IO and HLS auto-reload
+    useWatchRoom(isWatching ? roomId : null, isWatching);
 
     console.log('[Watch] Component rendered', { roomId, isWatching, urlRoomId });
 
@@ -30,6 +38,13 @@ export default function Watch() {
         }
     }, [isWatching, roomId, navigate]);
 
+
+    // Memoize playlist URL to prevent unnecessary recalculations
+    const playlistUrl = useMemo(
+        () => `http://localhost:3000/hls/${roomId}/playlist.m3u8`,
+        [roomId]
+    );
+
     const handleStartWatching = () => {
         console.log('[Watch] handleStartWatching called', { roomId });
         if (!roomId.trim()) {
@@ -37,9 +52,7 @@ export default function Watch() {
             return;
         }
 
-        // Extract UUID from input if it looks like a URL or has extra text
         // Extract Room ID from input (UUID or Short ID)
-        // Regex looks for UUID (8-4-4-4-12) OR Short ID (min 6 alphanumeric)
         const roomRegex = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})|([a-zA-Z0-9]{6,})/i;
         const match = roomId.match(roomRegex);
 
@@ -54,8 +67,6 @@ export default function Watch() {
         setIsWatching(true);
     };
 
-    const playlistUrl = `http://localhost:3000/hls/${roomId}/playlist.m3u8`;
-    console.log('[Watch] Playlist URL:', playlistUrl);
 
     return (
         <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-50">
@@ -118,8 +129,20 @@ export default function Watch() {
                             </Button>
                         </div>
 
-                        {/* HLS Player */}
-                        <HLSPlayer playlistUrl={playlistUrl} />
+                        {/* Transition Indicator */}
+                        {isTransitioning && (
+                            <div className="mb-4 px-4 py-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    <span>Updating stream...</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* HLS Player - key prop forces remount when hlsKey changes */}
+                        <HLSPlayer key={hlsKey} playlistUrl={playlistUrl} />
                     </div>
                 )}
             </div>

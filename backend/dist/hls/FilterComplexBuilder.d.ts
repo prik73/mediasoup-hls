@@ -15,7 +15,7 @@ export declare class FilterComplexBuilder {
      */
     private static singleUser;
     /**
-     * Two users: side-by-side (640x720 each)
+     * Two users: side-by-side (640x360 each)
      * Stream indices: [0:v:0], [0:v:1] = first and second video streams
      * Splits output for multi-quality encoding
      */

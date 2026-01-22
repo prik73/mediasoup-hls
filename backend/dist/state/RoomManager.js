@@ -8,6 +8,13 @@ import { RoomError } from '../utils/errors.js';
  */
 export class RoomManager {
     rooms = new Map();
+    io = null;
+    /**
+     * Set Socket.IO instance for HLS event emissions
+     */
+    setIO(io) {
+        this.io = io;
+    }
     /**
      * Create a new room
      */
@@ -77,7 +84,10 @@ export class RoomManager {
         }
         // CRITICAL: Reuse the same HLSManager instance so currentPipeline persists
         if (!room.hlsPipeline) {
-            room.hlsPipeline = new HLSManager(room.router, roomId);
+            if (!this.io) {
+                throw new RoomError('Socket.IO instance not set in RoomManager');
+            }
+            room.hlsPipeline = new HLSManager(room.router, roomId, this.io);
         }
         // Restart pipeline on the SAME instance
         await room.hlsPipeline.restartPipeline(room.producers);

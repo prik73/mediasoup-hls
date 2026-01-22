@@ -18,9 +18,11 @@ export class HLSManager {
     portAllocator;
     currentPipeline = null;
     roomId;
-    constructor(router, roomId) {
+    io;
+    constructor(router, roomId, io) {
         this.router = router;
         this.roomId = roomId;
+        this.io = io;
         this.portAllocator = new PortAllocator(hlsConfig.basePort, hlsConfig.maxPort);
     }
     /**
@@ -152,6 +154,16 @@ playlist.m3u8
         this.currentPipeline.plainTransports = plainTransports;
         this.currentPipeline.consumers = consumers;
         logger.info('HLS pipeline restarted successfully');
+        // Emit Socket.IO event to notify watch pages
+        const eventData = {
+            roomId: this.roomId,
+            timestamp: Date.now(),
+            userCount: fullProducers.length
+        };
+        logger.info(`[Socket.IO] Emitting 'hlsRestarted' event to room '${this.roomId}'`);
+        logger.info(`[Socket.IO] Event data:`, eventData);
+        this.io.to(this.roomId).emit('hlsRestarted', eventData);
+        logger.info(`[Socket.IO] Event emitted successfully`);
     }
     /**
      * Create PlainTransports for all users
@@ -216,6 +228,11 @@ playlist.m3u8
                 continue;
             if (!producer.videoProducer || !producer.audioProducer)
                 continue;
+            // Check if producers are still open (prevents race condition on disconnect)
+            if (producer.videoProducer.closed || producer.audioProducer.closed) {
+                logger.warn(`Producer for peer ${producer.peerId} is closed, skipping`);
+                continue;
+            }
             // Create video consumer (PAUSED)
             const videoConsumer = await transportPair.videoTransport.consume({
                 producerId: producer.videoProducer.id,

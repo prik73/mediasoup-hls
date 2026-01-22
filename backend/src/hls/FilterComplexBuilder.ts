@@ -36,14 +36,14 @@ export class FilterComplexBuilder {
     }
 
     /**
-     * Two users: side-by-side (640x720 each)
+     * Two users: side-by-side (640x360 each)
      * Stream indices: [0:v:0], [0:v:1] = first and second video streams
      * Splits output for multi-quality encoding
      */
     private static twoUsers(): string {
         return `
-      [0:v:0]scale=640:720[v0];
-      [0:v:1]scale=640:720[v1];
+      [0:v:0]scale=640:360[v0];
+      [0:v:1]scale=640:360[v1];
       [v0][v1]hstack[vtemp];
       [vtemp]split=2[vout0][vout1];
       [0:a:0][0:a:1]amix=inputs=2:duration=longest[atemp];

@@ -1,5 +1,6 @@
 import type { Router } from 'mediasoup/node/lib/types.js';
 import type { ProducerInfo } from '../state/types.js';
+import type { Server as SocketIOServer } from 'socket.io';
 /**
  * Orchestrates the entire HLS pipeline
  * Manages PlainTransports, consumers, SDP generation, and FFmpeg process
@@ -9,7 +10,8 @@ export declare class HLSManager {
     private portAllocator;
     private currentPipeline;
     private roomId;
-    constructor(router: Router, roomId: string);
+    private io;
+    constructor(router: Router, roomId: string, io: SocketIOServer);
     /**
      * Clean up all HLS files (static method for server startup)
      */

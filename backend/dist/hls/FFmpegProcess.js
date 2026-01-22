@@ -34,9 +34,11 @@ export class FFmpegProcess extends EventEmitter {
         // Uses filter_complex to composite users, then encodes at 720p and 360p
         const args = [
             '-protocol_whitelist', 'file,rtp,udp,crypto,data',
-            // Jitter Buffer Settings
-            '-reorder_queue_size', '10000',
-            '-max_delay', '10000000',
+            // Aggressive Jitter Buffer Settings for Multi-User RTP Streams
+            // These prevent "max delay reached" errors and packet loss
+            '-reorder_queue_size', '50000', // Increased from 10000
+            '-max_delay', '50000000', // 50 seconds (increased from 10s)
+            '-buffer_size', '10000000', // 10MB input buffer
             '-i', 'stream.sdp',
             // Apply filter complex to composite multiple users into grid layout
             // This creates [vout0]/[vout1] (split video) and [aout0]/[aout1] (split audio)
@@ -62,13 +64,17 @@ export class FFmpegProcess extends EventEmitter {
             '-c:a:1', 'aac',
             '-b:a:1', '96k',
             '-ar:a:1', '48000',
-            // Common encoding settings
-            '-r', '30',
+            // Common encoding settings (24 FPS for better 4-user performance)
+            '-r', '24',
             '-preset', 'veryfast',
             '-tune', 'zerolatency',
             '-g', '60',
             '-keyint_min', '60',
             '-sc_threshold', '0',
+            // Error concealment for corrupt RTP packets
+            '-err_detect', 'ignore_err', // Don't fail on decode errors
+            '-fflags', '+genpts+igndts', // Generate PTS, ignore DTS issues
+            '-threads', '4', // Use 4 threads for decoding
             // HLS variant stream settings
             '-f', 'hls',
             '-hls_time', '2',

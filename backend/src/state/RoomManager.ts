@@ -3,6 +3,7 @@ import { createRouter, closeRouter } from '../mediasoup/router.js';
 import { HLSManager } from '../hls/HLSManager.js';
 import { logger } from '../utils/logger.js';
 import { RoomError } from '../utils/errors.js';
+import type { Server as SocketIOServer } from 'socket.io';
 
 /**
  * Manages all rooms and their state
@@ -10,6 +11,14 @@ import { RoomError } from '../utils/errors.js';
  */
 export class RoomManager {
     private rooms: Map<string, Room> = new Map();
+    private io: SocketIOServer | null = null;
+
+    /**
+     * Set Socket.IO instance for HLS event emissions
+     */
+    setIO(io: SocketIOServer): void {
+        this.io = io;
+    }
 
     /**
      * Create a new room
@@ -91,7 +100,10 @@ export class RoomManager {
 
         // CRITICAL: Reuse the same HLSManager instance so currentPipeline persists
         if (!room.hlsPipeline) {
-            room.hlsPipeline = new HLSManager(room.router, roomId);
+            if (!this.io) {
+                throw new RoomError('Socket.IO instance not set in RoomManager');
+            }
+            room.hlsPipeline = new HLSManager(room.router, roomId, this.io);
         }
 
         // Restart pipeline on the SAME instance

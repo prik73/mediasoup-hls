@@ -56,8 +56,10 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
          */
         socket.on('joinRoom', async ({ roomId }, callback) => {
             try {
+                logger.info(`[Socket.IO] Peer ${peerId} attempting to join room ${roomId}`);
                 const room = roomManager.getRoom(roomId);
                 if (!room) {
+                    logger.warn(`[Socket.IO] Room ${roomId} not found`);
                     callback({ error: 'Room not found' });
                     return;
                 }
@@ -65,10 +67,11 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                 socketRooms.set(socket.id, roomId);
                 socket.join(roomId);
 
-                logger.info(`Peer ${peerId} joined room ${roomId}`);
+                logger.info(`[Socket.IO] ✅ Peer ${peerId} successfully joined room ${roomId}`);
+                logger.info(`[Socket.IO] Socket ${socket.id} is now in room ${roomId}`);
                 callback({ roomId, peerId });
             } catch (error: any) {
-                logger.error('Error joining room:', error);
+                logger.error('[Socket.IO] Error joining room:', error);
                 callback({ error: error.message });
             }
         });

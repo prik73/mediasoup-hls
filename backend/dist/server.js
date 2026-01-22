@@ -8,6 +8,7 @@ import { createWorker } from './mediasoup/worker.js';
 import { setupSocketHandlers } from './signaling/socketHandlers.js';
 import { logger } from './utils/logger.js';
 import { HLSManager } from './hls/HLSManager.js';
+import { roomManager } from './state/RoomManager.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
@@ -41,6 +42,7 @@ async function main() {
     });
     // Setup Socket.IO handlers
     setupSocketHandlers(io);
+    roomManager.setIO(io); // Pass io to RoomManager for HLS events
     logger.info('Socket.IO handlers setup complete');
     // Start server
     httpServer.listen(PORT, () => {

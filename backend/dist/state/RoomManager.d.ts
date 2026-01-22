@@ -1,10 +1,16 @@
 import type { Room, ProducerInfo } from './types.js';
+import type { Server as SocketIOServer } from 'socket.io';
 /**
  * Manages all rooms and their state
  * Tracks producers, consumers, and HLS pipelines
  */
 export declare class RoomManager {
     private rooms;
+    private io;
+    /**
+     * Set Socket.IO instance for HLS event emissions
+     */
+    setIO(io: SocketIOServer): void;
     /**
      * Create a new room
      */
