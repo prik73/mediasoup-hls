@@ -42,6 +42,30 @@ async function main() {
     // Clean up previous HLS sessions and zombie processes
     await HLSManager.cleanupAll();
 
+    // Auto-detect public IP for MediaSoup if not set (CRITICAL for AWS/VPS)
+    if (!process.env.MEDIASOUP_ANNOUNCED_IP) {
+        logger.info('Detecting public IP...');
+        try {
+            const https = await import('https');
+            const publicIp = await new Promise<string>((resolve, reject) => {
+                const req = https.get('https://api.ipify.org', (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => data += chunk);
+                    res.on('end', () => resolve(data.trim()));
+                });
+                req.on('error', reject);
+                req.end();
+            });
+
+            if (publicIp) {
+                process.env.MEDIASOUP_ANNOUNCED_IP = publicIp;
+                logger.info(`Auto-detected Public IP: ${publicIp}`);
+            }
+        } catch (error) {
+            logger.warn('Failed to auto-detect public IP, using default 127.0.0.1:', error);
+        }
+    }
+
     // Initialize Mediasoup worker
     logger.info('Initializing Mediasoup worker...');
     await createWorker();

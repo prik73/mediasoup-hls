@@ -62,7 +62,7 @@ export const mediasoupConfig = {
         listenIps: [
             {
                 ip: '0.0.0.0',
-                announcedIp: '127.0.0.1', // Change to public IP in production
+                announcedIp: process.env.MEDIASOUP_ANNOUNCED_IP || '127.0.0.1',
             },
         ],
         enableUdp: true,

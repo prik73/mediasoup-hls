@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: mediasoup-backend
+    restart: unless-stopped
+    network_mode: host # Critical for WebRTC performance & port range management
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - FRONTEND_URL=https://stream.prik.dev
+      # MEDIASOUP_ANNOUNCED_IP will be auto-detected by server.ts
+    volumes:
+      - ./public/hls:/app/public/hls
+
+  npm:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Allows NPM to reach backend on host:3000
