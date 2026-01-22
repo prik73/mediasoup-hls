@@ -33,7 +33,7 @@ export const useSocketStore = create<SocketStore>()(
                 }
 
                 console.log('[SocketStore] 🔌 Creating Socket.IO connection');
-                const socket = io('http://localhost:3000');
+                const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000');
 
                 socket.on('connect', () => {
                     console.log('[SocketStore] ✅ Connected, ID:', socket.id);
