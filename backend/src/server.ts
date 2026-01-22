@@ -61,7 +61,7 @@ async function main() {
             if (publicIp) {
                 process.env.MEDIASOUP_ANNOUNCED_IP = publicIp;
                 // CRITICAL FIX: Update the config object in memory because it was already imported with the old value
-                mediasoupConfig.webRtcTransport.listenIps[0].announcedIp = publicIp;
+                (mediasoupConfig.webRtcTransport as any).listenIps[0].announcedIp = publicIp;
                 logger.info(`Auto-detected Public IP: ${publicIp} (Updated Config)`);
             }
         } catch (error) {
