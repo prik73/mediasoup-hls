@@ -14,7 +14,7 @@ interface HLSStore {
 
 export const useHLSStore = create<HLSStore>()(
     devtools(
-        (set, get) => ({
+        (set) => ({
             hlsKey: 0,
             isTransitioning: false,
             lastReloadTime: null,

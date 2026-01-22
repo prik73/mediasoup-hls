@@ -281,7 +281,7 @@ export function useMediasoup({ videoDeviceId, audioDeviceId }: UseMediasoupProps
                     });
                 });
 
-                const consumerTransport = deviceRef.current.createRecvTransport(transportParams);
+                const consumerTransport = deviceRef.current!.createRecvTransport(transportParams);
                 consumerTransportRef.current = consumerTransport;
 
                 consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
