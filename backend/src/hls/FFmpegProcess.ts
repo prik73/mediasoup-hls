@@ -12,11 +12,13 @@ export class FFmpegProcess extends EventEmitter {
     private sdpPath: string;
     private outputPath: string;
     private cwd: string;
+    private filterComplex: string;
 
-    constructor(sdpPath: string, outputPath: string) {
+    constructor(sdpPath: string, outputPath: string, filterComplex: string) {
         super();
         this.sdpPath = sdpPath;
         this.outputPath = outputPath;
+        this.filterComplex = filterComplex;
         // Use outputPath as logical CWD for FFmpeg
         this.cwd = outputPath;
     }
@@ -33,20 +35,24 @@ export class FFmpegProcess extends EventEmitter {
      * Returns the process immediately so it can be saved before it exits
      */
     async start(): Promise<ChildProcess> {
-        // Multi-quality adaptive bitrate streaming
-        // Generate 2 variants: 720p HD and 360p SD
+        // Multi-user layout with multi-quality adaptive bitrate streaming
+        // Uses filter_complex to composite users, then encodes at 720p and 360p
         const args: string[] = [
             '-protocol_whitelist', 'file,rtp,udp,crypto,data',
 
             // Jitter Buffer Settings
-            '-reorder_queue_size', '10000', // Increase buffer for out-of-order packets
-            '-max_delay', '10000000', // 10s delay tolerance
+            '-reorder_queue_size', '10000',
+            '-max_delay', '10000000',
 
-            '-i', 'stream.sdp',  // Relative path
+            '-i', 'stream.sdp',
 
-            // Map video and audio for both variants
-            '-map', '0:v:0', '-map', '0:a:0',  // 720p variant
-            '-map', '0:v:0', '-map', '0:a:0',  // 360p variant
+            // Apply filter complex to composite multiple users into grid layout
+            // This creates [vout0]/[vout1] (split video) and [aout0]/[aout1] (split audio)
+            '-filter_complex', this.filterComplex,
+
+            // Map the split outputs for both quality variants
+            '-map', '[vout0]', '-map', '[aout0]',  // 720p variant
+            '-map', '[vout1]', '-map', '[aout1]',  // 360p variant
 
             // 720p HD variant (stream 0)
             '-c:v:0', 'libx264',
@@ -69,7 +75,7 @@ export class FFmpegProcess extends EventEmitter {
             '-ar:a:1', '48000',
 
             // Common encoding settings
-            '-r', '30', // 30fps for both variants
+            '-r', '30',
             '-preset', 'veryfast',
             '-tune', 'zerolatency',
             '-g', '60',
@@ -170,7 +176,47 @@ export class FFmpegProcess extends EventEmitter {
     }
 
     /**
-     * Kill the FFmpeg process
+     * Gracefully stop the FFmpeg process
+     * Sends SIGTERM first, waits for graceful shutdown, then SIGKILL if needed
+     */
+    async stop(): Promise<void> {
+        if (!this.process || this.process.killed) {
+            return;
+        }
+
+        logger.info('Stopping FFmpeg process gracefully...');
+
+        return new Promise<void>((resolve) => {
+            if (!this.process) {
+                resolve();
+                return;
+            }
+
+            // Send SIGTERM for graceful shutdown
+            this.process.kill('SIGTERM');
+
+            // Wait up to 5 seconds for graceful shutdown
+            const timeout = setTimeout(() => {
+                if (this.process && !this.process.killed) {
+                    logger.warn('FFmpeg did not stop gracefully, sending SIGKILL');
+                    this.process.kill('SIGKILL');
+                }
+                this.process = null;
+                resolve();
+            }, 5000);
+
+            // If process exits before timeout, clear timeout and resolve
+            this.process.once('exit', () => {
+                clearTimeout(timeout);
+                this.process = null;
+                logger.info('FFmpeg process stopped');
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * Kill the FFmpeg process immediately
      */
     kill(signal: NodeJS.Signals = 'SIGKILL'): void {
         if (this.process && !this.process.killed) {

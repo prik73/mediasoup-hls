@@ -55,9 +55,12 @@ export class SDPGenerator {
         ];
 
         // Add all media sections to the SAME SDP file
+        console.log(`[SDPGenerator] Generating SDP for ${consumers.length} consumers`);
         for (let i = 0; i < consumers.length; i++) {
             const consumer = consumers[i];
             const port = ports[i];
+
+            console.log(`[SDPGenerator] Adding media for consumer ${i}: peerId=${consumer.peerId}`);
 
             // Video media section
             if (consumer.videoConsumer) {

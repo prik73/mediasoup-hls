@@ -190,10 +190,19 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                     audioProducer: producers.audio,
                     transport,
                 };
+
+                logger.info(`[HLS DEBUG] Adding producer for peer ${peerId} to room ${roomId}`);
+                logger.info(`[HLS DEBUG] Room had ${roomManager.getProducers(roomId).size} producers before adding`);
+
                 roomManager.addProducer(roomId, peerId, producerInfo);
+
+                logger.info(`[HLS DEBUG] Room now has ${roomManager.getProducers(roomId).size} producers after adding`);
+                const allProducers = roomManager.getProducers(roomId);
+                logger.info(`[HLS DEBUG] All producers in room: ${Array.from(allProducers.keys()).join(', ')}`);
 
                 // Trigger HLS restart if both video and audio are present
                 if (producers.video && producers.audio) {
+                    logger.info(`[HLS DEBUG] Triggering HLS restart for room ${roomId} with ${allProducers.size} producers`);
                     await roomManager.restartHLS(roomId);
 
                     // Notify all clients in room

@@ -9,9 +9,13 @@ export class PortAllocator {
     maxPort;
     allocatedPorts;
     constructor(basePort = 20000, maxPort = 21000) {
-        this.basePort = basePort;
+        // Add a random offset to the start port to avoid collision with zombie processes
+        // ensuring we stay even (RTP needs even ports)
+        const randomOffset = Math.floor(Math.random() * 50) * 2; // 0 to 98
+        this.basePort = basePort + randomOffset;
         this.maxPort = maxPort;
         this.allocatedPorts = new Set();
+        logger.info(`PortAllocator initialized. Base port: ${this.basePort} (offset: ${randomOffset})`);
     }
     /**
      * Allocate ports for multiple users (video + audio per user)

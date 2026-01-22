@@ -1,4 +1,5 @@
 import { Button } from './ui/Button';
+import { DeviceSelector } from './ui/DeviceSelector';
 
 interface MediaControlsProps {
     isVideoEnabled: boolean;
@@ -7,6 +8,13 @@ interface MediaControlsProps {
     onToggleAudio: () => void;
     onStartStop: () => void;
     isProducing: boolean;
+    // Device selection props
+    videoDevices?: Array<{ deviceId: string; label: string }>;
+    audioDevices?: Array<{ deviceId: string; label: string }>;
+    selectedVideoId?: string;
+    selectedAudioId?: string;
+    onSelectVideo?: (deviceId: string) => void;
+    onSelectAudio?: (deviceId: string) => void;
 }
 
 /**
@@ -20,58 +28,96 @@ export default function MediaControls({
     onStartStop,
     isProducing,
     isLoading,
+    videoDevices = [],
+    audioDevices = [],
+    selectedVideoId = '',
+    selectedAudioId = '',
+    onSelectVideo,
+    onSelectAudio,
 }: MediaControlsProps & { isLoading: boolean }) {
     return (
         <div className="flex flex-wrap gap-3 justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-lg">
-            <Button
-                onClick={onToggleVideo}
-                variant={isVideoEnabled ? "primary" : "secondary"}
-                className="w-40"
-            >
-                <div className="flex items-center gap-2">
-                    {isVideoEnabled ? (
-                        <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Video Controls */}
+            <div className="flex items-center gap-2">
+                <Button
+                    onClick={onToggleVideo}
+                    variant={isVideoEnabled ? "primary" : "secondary"}
+                    className="w-40"
+                >
+                    <div className="flex items-center gap-2">
+                        {isVideoEnabled ? (
+                            <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span>Video On</span>
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+                                </svg>
+                                <span>Video Off</span>
+                            </>
+                        )}
+                    </div>
+                </Button>
+                {onSelectVideo && (
+                    <DeviceSelector
+                        devices={videoDevices}
+                        selectedDeviceId={selectedVideoId}
+                        onSelectDevice={onSelectVideo}
+                        label="Camera"
+                        icon={
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            <span>Video On</span>
-                        </>
-                    ) : (
-                        <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
-                            </svg>
-                            <span>Video Off</span>
-                        </>
-                    )}
-                </div>
-            </Button>
+                        }
+                    />
+                )}
+            </div>
 
-            <Button
-                onClick={onToggleAudio}
-                variant={isAudioEnabled ? "primary" : "secondary"}
-                className="w-40"
-            >
-                <div className="flex items-center gap-2">
-                    {isAudioEnabled ? (
-                        <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Audio Controls */}
+            <div className="flex items-center gap-2">
+                <Button
+                    onClick={onToggleAudio}
+                    variant={isAudioEnabled ? "primary" : "secondary"}
+                    className="w-40"
+                >
+                    <div className="flex items-center gap-2">
+                        {isAudioEnabled ? (
+                            <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                </svg>
+                                <span>Mic On</span>
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+                                </svg>
+                                <span>Mic Off</span>
+                            </>
+                        )}
+                    </div>
+                </Button>
+                {onSelectAudio && (
+                    <DeviceSelector
+                        devices={audioDevices}
+                        selectedDeviceId={selectedAudioId}
+                        onSelectDevice={onSelectAudio}
+                        label="Microphone"
+                        icon={
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                             </svg>
-                            <span>Mic On</span>
-                        </>
-                    ) : (
-                        <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
-                            </svg>
-                            <span>Mic Off</span>
-                        </>
-                    )}
-                </div>
-            </Button>
+                        }
+                    />
+                )}
+            </div>
 
             <Button
                 onClick={onStartStop}

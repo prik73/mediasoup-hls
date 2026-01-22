@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import type { Router, PlainTransport, Consumer } from 'mediasoup/node/lib/types.js';
 import { PortAllocator } from './PortAllocator.js';
 import { SDPGenerator } from './SDPGenerator.js';
+import { FilterComplexBuilder } from './FilterComplexBuilder.js';
 import { FFmpegProcess } from './FFmpegProcess.js';
 import { logger } from '../utils/logger.js';
 import type { HLSPipeline, PlainTransportPair, ConsumerPair, UserPorts, ProducerInfo } from '../state/types.js';
@@ -70,8 +71,10 @@ export class HLSManager {
     async restartPipeline(producers: Map<string, ProducerInfo>): Promise<void> {
         logger.info(`Restarting HLS pipeline for room ${this.roomId} with ${producers.size} producers`);
 
-        // Step 1: Cleanup old pipeline
-        await this.cleanup();
+        // Log each producer
+        for (const [peerId, info] of producers.entries()) {
+            logger.info(`  Producer: ${peerId}, hasVideo=${!!info.videoProducer}, hasAudio=${!!info.audioProducer}`);
+        }
 
         // Filter producers that have both video and audio
         const fullProducers = Array.from(producers.values()).filter(
@@ -79,9 +82,15 @@ export class HLSManager {
         );
 
         if (fullProducers.length === 0) {
-            logger.info('No producers with both video and audio, skipping HLS pipeline');
+            logger.info('No producers with both video and audio, stopping HLS pipeline completely');
+            // Perform complete cleanup when no producers remain
+            await this.cleanup();
+            await this.destroy();
             return;
         }
+
+        // Step 1: Cleanup old pipeline before starting new one
+        await this.cleanup();
 
         // Step 2: Allocate ports for all users
         const userPorts = this.portAllocator.allocateForUsers(fullProducers.map((p) => p.peerId));
@@ -96,7 +105,11 @@ export class HLSManager {
         await fs.mkdir(path.join(outputPath, 'v0'), { recursive: true });
         await fs.mkdir(path.join(outputPath, 'v1'), { recursive: true });
 
-        const ffmpeg = new FFmpegProcess('', outputPath); // SDP path will be set later
+        // Generate filter complex for multi-user grid layout
+        const filterComplex = FilterComplexBuilder.build(fullProducers.length);
+        logger.info(`Generated filter complex for ${fullProducers.length} user(s)`);
+
+        const ffmpeg = new FFmpegProcess('', outputPath, filterComplex); // SDP path will be set later
 
         // CRITICAL: Save FFmpeg to currentPipeline BEFORE starting it
         // This ensures cleanup() can find and kill it if needed
@@ -123,8 +136,16 @@ export class HLSManager {
 
         // Step 7: Write SINGLE SDP file with all media sections
         const sdpDir = path.join(hlsConfig.sdpDir, this.roomId);
+
+        // DEBUG: Log what we're passing to SDP generator
+        const consumerArray = Array.from(consumers.values());
+        logger.info(`Passing ${consumerArray.length} consumers to SDP generator`);
+        consumerArray.forEach((c, i) => {
+            logger.info(`  Consumer ${i}: peerId=${c.peerId}, hasVideo=${!!c.videoConsumer}, hasAudio=${!!c.audioConsumer}`);
+        });
+
         const sdpPath = await SDPGenerator.generateFile(
-            Array.from(consumers.values()),
+            consumerArray,
             userPorts.map(up => ({ video: up.video, audio: up.audio })),
             sdpDir
         );
@@ -284,14 +305,16 @@ playlist.m3u8
             logger.info(`Resuming consumers for peer ${peerId}`);
 
             // Resume consumers (Data starts flowing)
-            await pair.videoConsumer.resume();
-            await pair.audioConsumer.resume();
-
-            // Request Keyframe (Send IDR frame immediately)
-            // Use retry to ensure it arrives
-            this.requestKeyframeWithRetry(pair.videoConsumer).catch(err =>
-                logger.error(`Error requesting keyframe for ${peerId}:`, err)
-            );
+            if (pair.videoConsumer) {
+                await pair.videoConsumer.resume();
+                // Request keyframe for immediate playback
+                this.requestKeyframeWithRetry(pair.videoConsumer).catch(err =>
+                    logger.warn(`Failed to request keyframe for ${peerId}:`, err)
+                );
+            }
+            if (pair.audioConsumer) {
+                await pair.audioConsumer.resume();
+            }
         }
     }
 
@@ -321,16 +344,22 @@ playlist.m3u8
 
         logger.info('Cleaning up old HLS pipeline');
 
-        // CRITICAL: Kill FFmpeg FIRST to release UDP ports
+        // CRITICAL: Stop FFmpeg FIRST to release UDP ports
         if (this.currentPipeline.ffmpegProcess) {
             try {
-                logger.info('Killing old FFmpeg process');
-                this.currentPipeline.ffmpegProcess.kill('SIGKILL');
-                // Wait longer for process to actually die and release ports
-                await new Promise((resolve) => setTimeout(resolve, 300));
-                logger.info('FFmpeg process killed, ports should be released');
+                logger.info('Stopping old FFmpeg process gracefully');
+                const ffmpegProcess = this.currentPipeline.ffmpegProcess as any;
+                if (ffmpegProcess.stop) {
+                    await ffmpegProcess.stop();
+                } else {
+                    ffmpegProcess.kill('SIGTERM');
+                }
+                logger.info('FFmpeg process stopped, ports should be released');
+                // Wait for OS to fully release UDP ports
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                logger.info('Waited for port release');
             } catch (error) {
-                logger.warn('Error killing FFmpeg:', error);
+                logger.warn('Error stopping FFmpeg:', error);
             }
         }
 

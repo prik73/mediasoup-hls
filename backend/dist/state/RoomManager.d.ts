@@ -34,9 +34,18 @@ export declare class RoomManager {
      */
     closeRoom(roomId: string): Promise<void>;
     /**
+     * Get number of active rooms
+     */
+    getRoomCount(): number;
+    /**
      * Get all room IDs
      */
     getRoomIds(): string[];
+    /**
+     * Ensure only the latest N rooms are active
+     * Removes oldest rooms if limit is exceeded
+     */
+    ensureRoomLimit(limit: number): Promise<void>;
 }
 export declare const roomManager: RoomManager;
 //# sourceMappingURL=RoomManager.d.ts.map

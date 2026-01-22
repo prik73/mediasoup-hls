@@ -1,1 +1,101 @@
 @import "tailwindcss";
+
+/* Cream Light Theme - Soothing colors for light mode */
+@theme {
+    /* Light mode: Cream/Beige tones */
+    --color-cream-50: #fdfcfa;
+    --color-cream-100: #f8f6f1;
+    --color-cream-200: #f0ebe0;
+    --color-cream-300: #e8dfc8;
+    --color-cream-400: #d9cab3;
+    --color-cream-500: #c9b79c;
+    --color-cream-600: #b09a7d;
+    --color-cream-700: #8c7a5f;
+    --color-cream-800: #6b5d47;
+    --color-cream-900: #4a4032;
+}
+
+/* Light mode (default) - Cream theme */
+:root {
+    background-color: #fdfcfa;
+    color: #4a4032;
+}
+
+/* Override specific Tailwind utilities for light mode */
+.bg-white {
+    background-color: #fdfcfa;
+}
+
+.bg-zinc-50 {
+    background-color: #f8f6f1;
+}
+
+.bg-zinc-100 {
+    background-color: #f0ebe0;
+}
+
+.border-zinc-100 {
+    border-color: #e8dfc8;
+}
+
+.border-zinc-200 {
+    border-color: #e8dfc8;
+}
+
+.text-zinc-900 {
+    color: #4a4032;
+}
+
+.text-zinc-700 {
+    color: #6b5d47;
+}
+
+.text-zinc-600 {
+    color: #8c7a5f;
+}
+
+.text-zinc-500 {
+    color: #b09a7d;
+}
+
+/* Dark mode - Pure black theme */
+.dark {
+    background-color: #000;
+    color: #fafafa;
+}
+
+.dark .bg-white {
+    background-color: #000;
+}
+
+.dark .bg-zinc-50 {
+    background-color: rgb(9 9 11);
+}
+
+.dark .bg-zinc-100 {
+    background-color: rgb(24 24 27);
+}
+
+.dark .border-zinc-100 {
+    border-color: rgb(39 39 42);
+}
+
+.dark .border-zinc-200 {
+    border-color: rgb(39 39 42);
+}
+
+.dark .text-zinc-900 {
+    color: rgb(250 250 250);
+}
+
+.dark .text-zinc-700 {
+    color: rgb(161 161 170);
+}
+
+.dark .text-zinc-600 {
+    color: rgb(113 113 122);
+}
+
+.dark .text-zinc-500 {
+    color: rgb(113 113 122);
+}

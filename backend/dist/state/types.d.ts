@@ -1,11 +1,12 @@
 import type * as mediasoup from 'mediasoup';
 import type { Producer, Consumer, WebRtcTransport, PlainTransport } from 'mediasoup/node/lib/types.js';
 import type { ChildProcess } from 'child_process';
+import type { HLSManager } from '../hls/HLSManager.js';
 export interface Room {
     id: string;
     router: mediasoup.types.Router;
     producers: Map<string, ProducerInfo>;
-    hlsPipeline: HLSPipeline | null;
+    hlsPipeline: HLSManager | null;
 }
 export interface ProducerInfo {
     peerId: string;
@@ -49,18 +50,24 @@ export interface UserPorts {
 }
 export interface ServerToClientEvents {
     roomProducersChanged: (data: {
-        producers: string[];
+        producers: {
+            peerId: string;
+            videoProducerId?: string;
+            audioProducerId?: string;
+        }[];
     }) => void;
 }
 export interface ClientToServerEvents {
     createRoom: (callback: (data: {
         roomId?: string;
+        peerId?: string;
         error?: string;
     }) => void) => void;
     joinRoom: (data: {
         roomId: string;
     }, callback: (data: {
         roomId?: string;
+        peerId?: string;
         error?: string;
     }) => void) => void;
     getRouterRtpCapabilities: (callback: (data: {

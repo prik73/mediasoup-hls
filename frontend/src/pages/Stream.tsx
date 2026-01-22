@@ -6,13 +6,21 @@ import MediaControls from '../components/MediaControls';
 import VideoGrid from '../components/VideoGrid';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { Input } from '../components/ui/Input';
 import { logger } from '../utils/logger';
 
 export default function Stream() {
     const { roomId: urlRoomId } = useParams<{ roomId?: string }>();
     const navigate = useNavigate();
-    const { selectedVideoId, selectedAudioId } = useMediaDevices();
+    const {
+        selectedVideoId,
+        selectedAudioId,
+        videoDevices,
+        audioDevices,
+        setSelectedVideoId,
+        setSelectedAudioId,
+    } = useMediaDevices();
     const {
         roomId,
         isConnected,
@@ -157,6 +165,7 @@ export default function Stream() {
                         <h1 className="text-lg font-semibold tracking-tight">Stream Dashboard</h1>
                     </div>
                     <div className="flex items-center gap-3">
+                        <ThemeToggle />
                         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${isConnected
                             ? 'bg-zinc-900 text-white border-zinc-800 dark:bg-white dark:text-black dark:border-zinc-200'
                             : 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-500 dark:border-zinc-800'
@@ -172,7 +181,7 @@ export default function Stream() {
                 {!hasJoinedRoom ? (
                     <div className="max-w-md mx-auto pt-16">
                         <div className="text-center mb-8">
-                            <h2 className="text-2xl font-bold tracking-tight mb-2">Start Streaming</h2>
+                            <h2 className="text-2xl font-bold tracking-tight mb-3">Start Streaming</h2>
                             <p className="text-zinc-500 dark:text-zinc-400">Choose how you want to begin</p>
                         </div>
 
@@ -238,7 +247,13 @@ export default function Stream() {
                                         </div>
                                     </div>
 
-                                    <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                    <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+                                        <Link to={`/stream/${roomId}`} target="_blank" className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:underline flex items-center gap-1 transition-colors">
+                                            Open Stream Page
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </Link>
                                         <Link to={`/watch/${roomId}`} target="_blank" className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:underline flex items-center gap-1 transition-colors">
                                             Open Watch Page
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,6 +272,12 @@ export default function Stream() {
                                 onStartStop={handleStartStop}
                                 isProducing={isProducing}
                                 isLoading={isStreamingLoading}
+                                videoDevices={videoDevices}
+                                audioDevices={audioDevices}
+                                selectedVideoId={selectedVideoId}
+                                selectedAudioId={selectedAudioId}
+                                onSelectVideo={setSelectedVideoId}
+                                onSelectAudio={setSelectedAudioId}
                             />
                         </div>
 

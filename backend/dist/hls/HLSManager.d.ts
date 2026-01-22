@@ -11,6 +11,10 @@ export declare class HLSManager {
     private roomId;
     constructor(router: Router, roomId: string);
     /**
+     * Clean up all HLS files (static method for server startup)
+     */
+    static cleanupAll(): Promise<void>;
+    /**
      * Restart the HLS pipeline with current producers
      * This is called when producers join/leave or start/stop producing
      */
@@ -20,25 +24,26 @@ export declare class HLSManager {
      */
     private createPlainTransports;
     /**
-     * Write SDP file to disk
-     */
-    private writeSDP;
-    /**
-     * Connect PlainTransports to their assigned ports
+     * Connect PlainTransports to send RTP to FFmpeg
      */
     private connectPlainTransports;
     /**
-     * Create consumers for all producers with keyframe retry
+     * Create consumers for each producer on the PlainTransports
+     * CRITICAL: Returns consumers PAUSED. Do not resume here.
      */
     private createConsumers;
     /**
+     * Resume consumers and request keyframes
+     * Called AFTER FFmpeg is running and listening
+     */
+    private resumeAndRequestKeyframes;
+    /**
      * Request keyframe with retry mechanism
-     * Ensures fast HLS startup by requesting intra-frames
      */
     private requestKeyframeWithRetry;
     /**
-     * Cleanup current pipeline
-     */
+   * Cleanup current pipeline
+   */
     private cleanup;
     /**
      * Get current playlist path

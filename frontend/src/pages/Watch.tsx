@@ -4,6 +4,7 @@ import HLSPlayer from '../components/HLSPlayer';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export default function Watch() {
     const { roomId: urlRoomId } = useParams<{ roomId?: string }>();
@@ -69,6 +70,7 @@ export default function Watch() {
                         </Link>
                         <h1 className="text-lg font-semibold tracking-tight">Watch Stream</h1>
                     </div>
+                    <ThemeToggle />
                 </div>
             </header>
 

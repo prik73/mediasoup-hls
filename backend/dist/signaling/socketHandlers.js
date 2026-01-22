@@ -17,17 +17,24 @@ export function setupSocketHandlers(io) {
         // Generate peer ID for this socket
         const peerId = uuidv4();
         socketPeers.set(socket.id, peerId);
+        // Generate short alphanumeric ID string
+        const generateShortId = () => {
+            return Math.random().toString(36).substring(2, 8);
+        };
         /**
          * Create a new room
          */
         socket.on('createRoom', async (callback) => {
             try {
-                const roomId = uuidv4();
+                // Auto-cleanup: Ensure we only keep the latest 3 rooms
+                await roomManager.ensureRoomLimit(3);
+                const roomId = generateShortId();
+                // const roomId = uuidv4();
                 await roomManager.createRoom(roomId);
                 socketRooms.set(socket.id, roomId);
                 socket.join(roomId);
                 logger.info(`Room created: ${roomId} by ${peerId}`);
-                callback({ roomId });
+                callback({ roomId, peerId });
             }
             catch (error) {
                 logger.error('Error creating room:', error);
@@ -47,7 +54,7 @@ export function setupSocketHandlers(io) {
                 socketRooms.set(socket.id, roomId);
                 socket.join(roomId);
                 logger.info(`Peer ${peerId} joined room ${roomId}`);
-                callback({ roomId });
+                callback({ roomId, peerId });
             }
             catch (error) {
                 logger.error('Error joining room:', error);
@@ -161,13 +168,24 @@ export function setupSocketHandlers(io) {
                     audioProducer: producers.audio,
                     transport,
                 };
+                logger.info(`[HLS DEBUG] Adding producer for peer ${peerId} to room ${roomId}`);
+                logger.info(`[HLS DEBUG] Room had ${roomManager.getProducers(roomId).size} producers before adding`);
                 roomManager.addProducer(roomId, peerId, producerInfo);
+                logger.info(`[HLS DEBUG] Room now has ${roomManager.getProducers(roomId).size} producers after adding`);
+                const allProducers = roomManager.getProducers(roomId);
+                logger.info(`[HLS DEBUG] All producers in room: ${Array.from(allProducers.keys()).join(', ')}`);
                 // Trigger HLS restart if both video and audio are present
                 if (producers.video && producers.audio) {
+                    logger.info(`[HLS DEBUG] Triggering HLS restart for room ${roomId} with ${allProducers.size} producers`);
                     await roomManager.restartHLS(roomId);
                     // Notify all clients in room
+                    const producersList = Array.from(roomManager.getProducers(roomId).entries()).map(([pid, info]) => ({
+                        peerId: pid,
+                        videoProducerId: info.videoProducer?.id,
+                        audioProducerId: info.audioProducer?.id,
+                    }));
                     io.to(roomId).emit('roomProducersChanged', {
-                        producers: Array.from(roomManager.getProducers(roomId).keys()),
+                        producers: producersList,
                     });
                 }
                 callback({ id: producer.id });
@@ -197,8 +215,13 @@ export function setupSocketHandlers(io) {
                 // Restart HLS without this producer
                 await roomManager.restartHLS(roomId);
                 // Notify all clients
+                const producersList = Array.from(roomManager.getProducers(roomId).entries()).map(([pid, info]) => ({
+                    peerId: pid,
+                    videoProducerId: info.videoProducer?.id,
+                    audioProducerId: info.audioProducer?.id,
+                }));
                 io.to(roomId).emit('roomProducersChanged', {
-                    producers: Array.from(roomManager.getProducers(roomId).keys()),
+                    producers: producersList,
                 });
                 callback({ stopped: true });
             }
@@ -220,8 +243,8 @@ export function setupSocketHandlers(io) {
                 const producers = roomManager.getProducers(roomId);
                 const producerList = Array.from(producers.entries()).map(([peerId, info]) => ({
                     peerId,
-                    hasVideo: !!info.videoProducer,
-                    hasAudio: !!info.audioProducer,
+                    videoProducerId: info.videoProducer?.id,
+                    audioProducerId: info.audioProducer?.id,
                 }));
                 callback({ producers: producerList });
             }
@@ -343,8 +366,13 @@ export function setupSocketHandlers(io) {
                 try {
                     await roomManager.restartHLS(roomId);
                     // Notify remaining clients
+                    const producersList = Array.from(roomManager.getProducers(roomId).entries()).map(([pid, info]) => ({
+                        peerId: pid,
+                        videoProducerId: info.videoProducer?.id,
+                        audioProducerId: info.audioProducer?.id,
+                    }));
                     io.to(roomId).emit('roomProducersChanged', {
-                        producers: Array.from(roomManager.getProducers(roomId).keys()),
+                        producers: producersList,
                     });
                 }
                 catch (error) {

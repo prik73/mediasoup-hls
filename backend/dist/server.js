@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { createWorker } from './mediasoup/worker.js';
 import { setupSocketHandlers } from './signaling/socketHandlers.js';
 import { logger } from './utils/logger.js';
+import { HLSManager } from './hls/HLSManager.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,8 @@ async function main() {
     app.get('/health', (req, res) => {
         res.json({ status: 'ok' });
     });
+    // Clean up previous HLS sessions and zombie processes
+    await HLSManager.cleanupAll();
     // Initialize Mediasoup worker
     logger.info('Initializing Mediasoup worker...');
     await createWorker();

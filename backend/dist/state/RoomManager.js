@@ -75,16 +75,12 @@ export class RoomManager {
         if (!room) {
             throw new RoomError(`Room ${roomId} not found`);
         }
-        // Create HLS manager if it doesn't exist
+        // CRITICAL: Reuse the same HLSManager instance so currentPipeline persists
         if (!room.hlsPipeline) {
-            const hlsManager = new HLSManager(room.router, roomId);
-            await hlsManager.restartPipeline(room.producers);
+            room.hlsPipeline = new HLSManager(room.router, roomId);
         }
-        else {
-            // Restart existing pipeline
-            const hlsManager = new HLSManager(room.router, roomId);
-            await hlsManager.restartPipeline(room.producers);
-        }
+        // Restart pipeline on the SAME instance
+        await room.hlsPipeline.restartPipeline(room.producers);
     }
     /**
      * Close a room and cleanup resources
@@ -101,8 +97,7 @@ export class RoomManager {
         }
         // Close HLS pipeline
         if (room.hlsPipeline) {
-            const hlsManager = new HLSManager(room.router, roomId);
-            await hlsManager.destroy();
+            await room.hlsPipeline.destroy();
         }
         // Close router
         closeRouter(roomId);
@@ -110,10 +105,33 @@ export class RoomManager {
         logger.info(`Room closed: ${roomId}`);
     }
     /**
+     * Get number of active rooms
+     */
+    getRoomCount() {
+        return this.rooms.size;
+    }
+    /**
      * Get all room IDs
      */
     getRoomIds() {
         return Array.from(this.rooms.keys());
+    }
+    /**
+     * Ensure only the latest N rooms are active
+     * Removes oldest rooms if limit is exceeded
+     */
+    async ensureRoomLimit(limit) {
+        while (this.rooms.size >= limit) {
+            // Map iterates in insertion order, so the first key is the oldest
+            const oldestRoomId = this.rooms.keys().next().value;
+            if (oldestRoomId) {
+                logger.info(`Room limit reached (${limit}). Closing oldest room: ${oldestRoomId}`);
+                await this.closeRoom(oldestRoomId);
+            }
+            else {
+                break;
+            }
+        }
     }
 }
 // Singleton instance
