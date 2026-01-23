@@ -52,42 +52,31 @@ export class FFmpegProcess extends EventEmitter {
             // This creates [vout0]/[vout1] (split video) and [aout0]/[aout1] (split audio)
             '-filter_complex', this.filterComplex,
 
-            // Map the split outputs for both quality variants
-            '-map', '[vout0]', '-map', '[aout0]',  // 720p variant
-            '-map', '[vout1]', '-map', '[aout1]',  // 360p variant
+            // Map the single output
+            '-map', '[vout0]', '-map', '[aout0]',
 
-            // 720p HD variant (stream 0)
+            // 480p optimized variant (Single Stream)
             '-c:v:0', 'libx264',
-            '-b:v:0', '2500k',
-            '-s:v:0', '1280x720',
-            '-maxrate:v:0', '3000k',
-            '-bufsize:v:0', '6000k',
+            '-b:v:0', '1000k',
+            '-s:v:0', '854x480',
+            '-maxrate:v:0', '1200k',
+            '-bufsize:v:0', '2400k',
             '-c:a:0', 'aac',
-            '-b:a:0', '128k',
+            '-b:a:0', '96k',
             '-ar:a:0', '48000',
 
-            // 360p SD variant (stream 1)
-            '-c:v:1', 'libx264',
-            '-b:v:1', '800k',
-            '-s:v:1', '640x360',
-            '-maxrate:v:1', '1000k',
-            '-bufsize:v:1', '2000k',
-            '-c:a:1', 'aac',
-            '-b:a:1', '96k',
-            '-ar:a:1', '48000',
-
-            // Common encoding settings (24 FPS for better 4-user performance)
+            // Performance settings for t3.small
             '-r', '24',
-            '-preset', 'veryfast',
+            '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-g', '60',
-            '-keyint_min', '60',
+            '-g', '48', // 2 second GOP at 24fps
+            '-keyint_min', '48',
             '-sc_threshold', '0',
 
             // Error concealment for corrupt RTP packets
-            '-err_detect', 'ignore_err',         // Don't fail on decode errors
-            '-fflags', '+genpts+igndts',         // Generate PTS, ignore DTS issues
-            '-threads', '4',                      // Use 4 threads for decoding
+            '-err_detect', 'ignore_err',
+            '-fflags', '+genpts+igndts',
+            '-threads', '2', // Limit threads to avoid context switching overhead
 
             // HLS variant stream settings
             '-f', 'hls',
@@ -95,8 +84,8 @@ export class FFmpegProcess extends EventEmitter {
             '-hls_list_size', '10',
             '-hls_flags', 'delete_segments+append_list+program_date_time+independent_segments',
 
-            // Variant stream mapping: v:0,a:0 = 720p, v:1,a:1 = 360p
-            '-var_stream_map', 'v:0,a:0 v:1,a:1',
+            // Single stream mapping
+            '-var_stream_map', 'v:0,a:0',
             '-master_pl_name', 'playlist.m3u8',
             '-hls_segment_filename', 'v%v/segment-%03d.ts',
             'v%v/index.m3u8',

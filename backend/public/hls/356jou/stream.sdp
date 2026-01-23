@@ -1,0 +1,19 @@
+v=0
+o=- 0 0 IN IP4 127.0.0.1
+s=Mediasoup HLS Stream
+c=IN IP4 127.0.0.1
+t=0 0
+m=video 20066 RTP/AVP 101
+a=rtpmap:101 H264/90000
+a=fmtp:101 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
+a=rtcp:20067 IN IP4 127.0.0.1
+m=audio 20068 RTP/AVP 100
+a=rtpmap:100 opus/48000/2
+a=rtcp:20069 IN IP4 127.0.0.1
+m=video 20070 RTP/AVP 101
+a=rtpmap:101 H264/90000
+a=fmtp:101 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
+a=rtcp:20071 IN IP4 127.0.0.1
+m=audio 20072 RTP/AVP 100
+a=rtpmap:100 opus/48000/2
+a=rtcp:20073 IN IP4 127.0.0.1

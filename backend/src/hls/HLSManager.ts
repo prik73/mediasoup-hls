@@ -106,7 +106,7 @@ export class HLSManager {
         await fs.mkdir(outputPath, { recursive: true });
         // Create variant directories for multi-quality streaming
         await fs.mkdir(path.join(outputPath, 'v0'), { recursive: true });
-        await fs.mkdir(path.join(outputPath, 'v1'), { recursive: true });
+        // Eco Mode: Only v0 is used
 
         // Generate filter complex for multi-user grid layout
         const filterComplex = FilterComplexBuilder.build(fullProducers.length);
@@ -183,14 +183,14 @@ export class HLSManager {
         logger.info('FFmpeg ready. Resuming consumers and requesting keyframes...');
         await this.resumeAndRequestKeyframes(consumers);
 
-        // Manually write master playlist
+        // Manually write master playlist (Eco Mode: Single 480p Stream)
         const masterPlaylistContent = `#EXTM3U
 #EXT-X-VERSION:3
-#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720,NAME="720p"
+#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=854x480,NAME="480p"
 playlist.m3u8
 `;
         await fs.writeFile(path.join(outputPath, 'index.m3u8'), masterPlaylistContent);
-        logger.info('Manually wrote index.m3u8 master playlist using flat structure');
+        logger.info('Manually wrote index.m3u8 master playlist using flat structure (Eco Mode)');
 
         // Step 10: Update pipeline state
         this.currentPipeline.plainTransports = plainTransports;

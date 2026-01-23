@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { createWorker } from './mediasoup/worker.js';
 import { setupSocketHandlers } from './signaling/socketHandlers.js';
 import { logger } from './utils/logger.js';
+import { mediasoupConfig } from './config/mediasoup.config.js';
 import { HLSManager } from './hls/HLSManager.js';
 import { roomManager } from './state/RoomManager.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +33,31 @@ async function main() {
     });
     // Clean up previous HLS sessions and zombie processes
     await HLSManager.cleanupAll();
+    // Auto-detect public IP for MediaSoup if not set (CRITICAL for AWS/VPS)
+    if (!process.env.MEDIASOUP_ANNOUNCED_IP) {
+        logger.info('Detecting public IP...');
+        try {
+            const https = await import('https');
+            const publicIp = await new Promise((resolve, reject) => {
+                const req = https.get('https://api.ipify.org', (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => data += chunk);
+                    res.on('end', () => resolve(data.trim()));
+                });
+                req.on('error', reject);
+                req.end();
+            });
+            if (publicIp) {
+                process.env.MEDIASOUP_ANNOUNCED_IP = publicIp;
+                // CRITICAL FIX: Update the config object in memory because it was already imported with the old value
+                mediasoupConfig.webRtcTransport.listenIps[0].announcedIp = publicIp;
+                logger.info(`Auto-detected Public IP: ${publicIp} (Updated Config)`);
+            }
+        }
+        catch (error) {
+            logger.warn('Failed to auto-detect public IP, using default 127.0.0.1:', error);
+        }
+    }
     // Initialize Mediasoup worker
     logger.info('Initializing Mediasoup worker...');
     await createWorker();

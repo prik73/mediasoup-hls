@@ -29,8 +29,8 @@ export class FilterComplexBuilder {
     static singleUser() {
         return `
       [0:v:0]scale=1280:720[vtemp];
-      [vtemp]split=2[vout0][vout1];
-      [0:a:0]asplit=2[aout0][aout1]
+      [vtemp]copy[vout0];
+      [0:a:0]acopy[aout0]
     `.trim();
     }
     /**
@@ -43,9 +43,9 @@ export class FilterComplexBuilder {
       [0:v:0]scale=640:360[v0];
       [0:v:1]scale=640:360[v1];
       [v0][v1]hstack[vtemp];
-      [vtemp]split=2[vout0][vout1];
+      [vtemp]copy[vout0];
       [0:a:0][0:a:1]amix=inputs=2:duration=longest[atemp];
-      [atemp]asplit=2[aout0][aout1]
+      [atemp]acopy[aout0]
     `.trim();
     }
     /**
@@ -61,9 +61,9 @@ export class FilterComplexBuilder {
       [v0][v1]hstack[top];
       [v2]pad=1280:360:(ow-iw)/2:0:black[v2_padded];
       [top][v2_padded]vstack[vtemp];
-      [vtemp]split=2[vout0][vout1];
+      [vtemp]copy[vout0];
       [0:a:0][0:a:1][0:a:2]amix=inputs=3:duration=longest[atemp];
-      [atemp]asplit=2[aout0][aout1]
+      [atemp]acopy[aout0]
     `.trim();
     }
     /**
@@ -79,9 +79,9 @@ export class FilterComplexBuilder {
       [v0][v1]hstack[top];
       [v2][v3]hstack[bottom];
       [top][bottom]vstack[vtemp];
-      [vtemp]split=2[vout0][vout1];
+      [vtemp]copy[vout0];
       [0:a:0][0:a:1][0:a:2][0:a:3]amix=inputs=4:duration=longest[atemp];
-      [atemp]asplit=2[aout0][aout1]
+      [atemp]acopy[aout0]
     `.trim();
     }
 }
