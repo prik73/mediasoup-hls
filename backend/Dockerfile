@@ -40,7 +40,8 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/public ./public
+# Create public directory for HLS segments
+RUN mkdir -p public
 
 # Environment variables (overridden by docker-compose)
 ENV NODE_ENV=production
