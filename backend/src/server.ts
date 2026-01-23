@@ -44,8 +44,9 @@ async function main() {
     await HLSManager.cleanupAll();
 
     // Auto-detect public IP for MediaSoup if not set (CRITICAL for AWS/VPS)
-    if (!process.env.MEDIASOUP_ANNOUNCED_IP) {
-        logger.info('Detecting public IP...');
+    // BUT: Skip if in development mode to force 127.0.0.1 for local testing
+    if (process.env.NODE_ENV === 'production' && !process.env.MEDIASOUP_ANNOUNCED_IP) {
+        logger.info('Detecting public IP (Production Mode)...');
         try {
             const https = await import('https');
             const publicIp = await new Promise<string>((resolve, reject) => {
@@ -67,6 +68,10 @@ async function main() {
         } catch (error) {
             logger.warn('Failed to auto-detect public IP, using default 127.0.0.1:', error);
         }
+    } else if (!process.env.MEDIASOUP_ANNOUNCED_IP) {
+        logger.info('Development mode detected: Forcing announced IP to 127.0.0.1');
+        process.env.MEDIASOUP_ANNOUNCED_IP = '127.0.0.1';
+        (mediasoupConfig.webRtcTransport as any).listenIps[0].announcedIp = '127.0.0.1';
     }
 
     // Initialize Mediasoup worker
