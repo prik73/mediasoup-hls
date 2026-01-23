@@ -183,14 +183,14 @@ export class HLSManager {
         logger.info('FFmpeg ready. Resuming consumers and requesting keyframes...');
         await this.resumeAndRequestKeyframes(consumers);
 
-        // Manually write master playlist (Ultra-Low Eco Mode: Single 240p Stream)
+        // Manually write master playlist (Ultra-Minimal Mode: Single 144p Stream)
         const masterPlaylistContent = `#EXTM3U
 #EXT-X-VERSION:3
-#EXT-X-STREAM-INF:BANDWIDTH=400000,RESOLUTION=426x240,NAME="240p"
+#EXT-X-STREAM-INF:BANDWIDTH=250000,RESOLUTION=256x144,NAME="144p"
 playlist.m3u8
 `;
         await fs.writeFile(path.join(outputPath, 'index.m3u8'), masterPlaylistContent);
-        logger.info('Manually wrote index.m3u8 master playlist using flat structure (Ultra-Eco Mode)');
+        logger.info('Manually wrote index.m3u8 master playlist using flat structure (Ultra-Minimal 144p Mode)');
 
         // Step 10: Update pipeline state
         this.currentPipeline.plainTransports = plainTransports;

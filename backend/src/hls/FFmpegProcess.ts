@@ -55,17 +55,17 @@ export class FFmpegProcess extends EventEmitter {
             // Map the single output
             '-map', '[vout0]', '-map', '[aout0]',
 
-            // 240p Ultra-Low Eco variant (Single Stream)
+            // 144p Ultra-Minimal variant (Single Stream)
             '-c:v:0', 'libx264',
-            '-b:v:0', '400k',
-            '-s:v:0', '426x240',
-            '-maxrate:v:0', '600k',
-            '-bufsize:v:0', '1200k',
+            '-b:v:0', '250k',
+            '-s:v:0', '256x144',
+            '-maxrate:v:0', '350k',
+            '-bufsize:v:0', '700k',
             '-c:a:0', 'aac',
-            '-b:a:0', '96k',
+            '-b:a:0', '64k',
             '-ar:a:0', '48000',
 
-            // Performance settings for Local Dev / Weak CPU
+            // Performance settings for Ultra-Low CPU / Minimal Bandwidth
             '-r', '15',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
