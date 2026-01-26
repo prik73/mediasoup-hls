@@ -71,7 +71,7 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-    createRoom: (callback: (data: { roomId?: string; peerId?: string; error?: string }) => void) => void;
+    createRoom: (data: { password?: string }, callback: (data: { roomId?: string; peerId?: string; error?: string }) => void) => void;
     joinRoom: (data: { roomId: string }, callback: (data: { roomId?: string; peerId?: string; error?: string }) => void) => void;
     getRouterRtpCapabilities: (callback: (data: { rtpCapabilities?: any; error?: string }) => void) => void;
     createProducerTransport: (callback: (data: any) => void) => void;

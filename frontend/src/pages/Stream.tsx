@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMediasoup } from '../hooks/useMediasoup';
 import { useMediaDevices } from '../hooks/useMediaDevices';
 import MediaControls from '../components/MediaControls';
@@ -13,6 +13,11 @@ import { logger } from '../utils/logger';
 export default function Stream() {
     const { roomId: urlRoomId } = useParams<{ roomId?: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+    const passwordFromHome = location.state?.password;
+
+    // ... (rest of hooks) ...
+
     const {
         selectedVideoId,
         selectedAudioId,
@@ -42,6 +47,20 @@ export default function Stream() {
     const [roomIdInput, setRoomIdInput] = useState('');
     const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
     const [error, setError] = useState('');
+    const [password, setPassword] = useState(passwordFromHome || '');
+
+    // Redirect to home if no password provided and not joining existing room
+    useEffect(() => {
+        if (!urlRoomId && !passwordFromHome) {
+            // Optional: Force redirect to home if strictly enforcing "Must start from Home"
+            // navigate('/'); 
+            // But for better UX, maybe just leave the input field if they came directly.
+            // User Request: "without entering password no one can enter" 
+            // Implementing strict check:
+            logger.warn("Direct access attempt without password. Redirecting to home.");
+            navigate('/');
+        }
+    }, [urlRoomId, passwordFromHome, navigate]);
 
     // Auto-join room from URL on mount
     useEffect(() => {
@@ -70,7 +89,7 @@ export default function Stream() {
         try {
             setError('');
             logger.info('Creating new room...');
-            const newRoomId = await createRoom();
+            const newRoomId = await createRoom(password);
             logger.info('Room created:', newRoomId);
             setHasJoinedRoom(true);
         } catch (err: any) {
@@ -152,25 +171,25 @@ export default function Stream() {
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-50">
+        <div className="min-h-screen bg-background text-foreground transition-colors duration-300 animate-page-enter">
             {/* Minimal Header */}
-            <header className="border-b border-zinc-100 dark:border-zinc-900">
+            <header className="border-b border-border">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link to="/" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                        <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                             </svg>
                         </Link>
-                        <h1 className="text-lg font-semibold tracking-tight">Stream Dashboard</h1>
+                        <h1 className="text-lg font-semibold tracking-tight text-foreground">Stream Dashboard</h1>
                     </div>
                     <div className="flex items-center gap-3">
                         <ThemeToggle />
                         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${isConnected
-                            ? 'bg-zinc-900 text-white border-zinc-800 dark:bg-white dark:text-black dark:border-zinc-200'
-                            : 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-500 dark:border-zinc-800'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted text-muted-foreground border-border'
                             }`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-white dark:bg-black' : 'bg-zinc-400 dark:bg-zinc-600'} animate-pulse`} />
+                            <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-primary-foreground' : 'bg-foreground/50'} animate-pulse`} />
                             {isConnected ? 'Connected' : 'Disconnected'}
                         </div>
                     </div>
@@ -182,28 +201,47 @@ export default function Stream() {
                     <div className="max-w-md mx-auto pt-16">
                         <div className="text-center mb-8">
                             <h2 className="text-2xl font-bold tracking-tight mb-3">Start Streaming</h2>
-                            <p className="text-zinc-500 dark:text-zinc-400">Choose how you want to begin</p>
+                            <p className="text-muted-foreground">Choose how you want to begin</p>
                         </div>
 
-                        <Card className="space-y-8 p-8">
+                        <Card
+                            className="space-y-8 p-8"
+                            footer={
+                                <div className="text-center text-xs text-muted-foreground">
+                                    To run the setup locally in high quality, explore <a href="https://github.com/prik73/mediasoup-docker-setup" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline underline-offset-4">this</a>.
+                                    <br />
+                                    Check <a href="https://github.com/prik73/mediasoup-hls" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline underline-offset-4">this</a> to see the whole architecture.
+                                </div>
+                            }
+                        >
                             {/* Create Room */}
                             <div className="space-y-4">
+                                {/* Only show password input if not provided from Home (fallback) */}
+                                {!passwordFromHome && (
+                                    <Input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Enter Admin Password"
+                                        className="text-center"
+                                    />
+                                )}
                                 <Button
                                     onClick={handleCreateRoom}
                                     variant="primary"
                                     size="lg"
-                                    className="w-full h-12 border border-zinc-800 dark:border-zinc-700 shadow-sm"
+                                    className="w-full h-12 border border-input shadow-sm"
                                 >
                                     Create New Room
                                 </Button>
-                                <p className="text-xs text-center text-zinc-500">
+                                <p className="text-xs text-center text-muted-foreground">
                                     Generates a unique room ID instantly
                                 </p>
                             </div>
 
                             <div className="relative">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-100 dark:border-zinc-800"></div></div>
-                                <div className="relative flex justify-center text-xs uppercase text-zinc-400 bg-white dark:bg-zinc-900 px-2">Or join existing</div>
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"></div></div>
+                                <div className="relative flex justify-center text-xs uppercase text-muted-foreground bg-card px-2">Or join existing</div>
                             </div>
 
                             {/* Join Room */}
@@ -229,9 +267,9 @@ export default function Stream() {
                             <Card>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="text-xs font-semibold uppercase text-zinc-500 mb-1.5 block">Room ID</label>
+                                        <label className="text-xs font-semibold uppercase text-muted-foreground mb-1.5 block">Room ID</label>
                                         <div className="flex gap-2">
-                                            <code className="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-950 rounded text-sm font-mono border border-zinc-200 dark:border-zinc-800 overflow-hidden text-ellipsis">
+                                            <code className="flex-1 px-3 py-2 bg-muted/50 rounded text-sm font-mono border border-input overflow-hidden text-ellipsis">
                                                 {roomId}
                                             </code>
                                             <Button onClick={copyRoomUrl} size="sm" variant="secondary" className="px-3 relative" title="Copy Room URL">

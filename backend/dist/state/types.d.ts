@@ -58,7 +58,9 @@ export interface ServerToClientEvents {
     }) => void;
 }
 export interface ClientToServerEvents {
-    createRoom: (callback: (data: {
+    createRoom: (data: {
+        password?: string;
+    }, callback: (data: {
         roomId?: string;
         peerId?: string;
         error?: string;

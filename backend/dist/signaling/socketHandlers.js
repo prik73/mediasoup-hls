@@ -24,7 +24,13 @@ export function setupSocketHandlers(io) {
         /**
          * Create a new room
          */
-        socket.on('createRoom', async (callback) => {
+        socket.on('createRoom', async ({ password }, callback) => {
+            const STREAM_PASSWORD = process.env.STREAM_PASSWORD || 'admin123';
+            if (password !== STREAM_PASSWORD) {
+                logger.warn(`Peer ${peerId} failed auth with password: ${password}`);
+                callback({ error: 'Invalid password' });
+                return;
+            }
             try {
                 // Auto-cleanup: Ensure we only keep the latest 3 rooms
                 await roomManager.ensureRoomLimit(3);

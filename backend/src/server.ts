@@ -48,6 +48,19 @@ async function main() {
         res.json({ status: 'ok' });
     });
 
+    // Password verification endpoint
+    app.use(express.json());
+    app.post('/auth/verify', (req, res) => {
+        const { password } = req.body;
+        const VALID_PASSWORD = process.env.STREAM_PASSWORD || 'admin123';
+
+        if (password === VALID_PASSWORD) {
+            res.json({ valid: true });
+        } else {
+            res.status(401).json({ valid: false, error: 'Invalid password' });
+        }
+    });
+
     // Clean up previous HLS sessions and zombie processes
     await HLSManager.cleanupAll();
 

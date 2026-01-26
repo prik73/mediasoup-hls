@@ -31,7 +31,22 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         /**
          * Create a new room
          */
-        socket.on('createRoom', async (callback) => {
+        socket.on('createRoom', async (data: any, cb?: any) => {
+            // Handle legacy/stale client signature: (callback) instead of ({password}, callback)
+            const callback = typeof data === 'function' ? data : cb;
+            const password = typeof data === 'object' ? data.password : undefined;
+
+            if (typeof callback !== 'function') {
+                logger.warn(`Peer ${peerId} sent createRoom without a callback. Ignoring.`);
+                return;
+            }
+
+            const STREAM_PASSWORD = process.env.STREAM_PASSWORD || 'admin123';
+            if (password !== STREAM_PASSWORD) {
+                logger.warn(`Peer ${peerId} failed auth with password: ${password}`);
+                callback({ error: 'Invalid password' });
+                return;
+            }
             try {
                 // Auto-cleanup: Ensure we only keep the latest 3 rooms
                 await roomManager.ensureRoomLimit(3);

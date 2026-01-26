@@ -36,7 +36,7 @@ export default function MediaControls({
     onSelectAudio,
 }: MediaControlsProps & { isLoading: boolean }) {
     return (
-        <div className="flex flex-wrap gap-3 justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-lg">
+        <div className="flex flex-wrap gap-3 justify-center p-6 bg-card border border-border rounded-lg shadow-sm">
             {/* Video Controls */}
             <div className="flex items-center gap-2">
                 <Button

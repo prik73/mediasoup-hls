@@ -90,14 +90,14 @@ export function useMediasoup({ videoDeviceId, audioDeviceId }: UseMediasoupProps
 
 
     // Create or join room
-    const createRoom = useCallback(async () => {
+    const createRoom = useCallback(async (password?: string) => {
         if (!socket) return;
 
         return new Promise<string>((resolve, reject) => {
-            socket.emit('createRoom', (response: any) => {
+            socket.emit('createRoom', { password }, (response: any) => {
                 if (response.error) {
                     logger.error('Failed to create room:', response.error);
-                    reject(response.error);
+                    reject(new Error(response.error));
                 } else {
                     logger.info('Room created:', response.roomId);
                     setRoomId(response.roomId);
