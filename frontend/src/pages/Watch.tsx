@@ -41,7 +41,7 @@ export default function Watch() {
 
     // Memoize playlist URL to prevent unnecessary recalculations
     const playlistUrl = useMemo(
-        () => `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/hls/${roomId}/playlist.m3u8`,
+        () => `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/hls/${roomId}/playlist.m3u8`,
         [roomId]
     );
 
