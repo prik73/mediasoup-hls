@@ -68,6 +68,9 @@ export default function Watch() {
     };
 
 
+
+    const [showEasterEgg, setShowEasterEgg] = useState(false);
+
     return (
         <div className="min-h-screen bg-background text-foreground transition-colors duration-300 animate-page-enter">
             {/* Header */}
@@ -141,13 +144,26 @@ export default function Watch() {
                             </div>
                         )}
 
-                        {/* Challenge Message */}
-                        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg text-yellow-500 text-sm font-medium text-center">
-                            Default is 144p. Try changing the quality to upper and see the server crash :))) lol
+                        {/* Challenge Message - Easter Egg */}
+                        <div className={`mb-4 p-3 rounded-lg text-sm font-medium text-center transition-all duration-500 ease-in-out ${showEasterEgg
+                                ? 'bg-amber-500/10 border border-amber-500/50 text-amber-600 dark:text-amber-500'
+                                : 'bg-yellow-500/10 border border-yellow-500/50 text-yellow-600 dark:text-yellow-500'
+                            }`}>
+                            {showEasterEgg ? (
+                                <span className="animate-fade-in">
+                                    kidding :)) this machine has not enough power to handle higher picture quality, to test click <a href="https://github.com/prik73/mediasoup-docker-setup" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-300 font-bold">this</a>
+                                </span>
+                            ) : (
+                                "Default is 144p. Try changing the quality to upper and see the server crash :))) lol"
+                            )}
                         </div>
 
                         {/* HLS Player - key prop forces remount when hlsKey changes */}
-                        <HLSPlayer key={hlsKey} playlistUrl={playlistUrl} />
+                        <HLSPlayer
+                            key={hlsKey}
+                            playlistUrl={playlistUrl}
+                            onQualityMenuOpen={() => setShowEasterEgg(true)}
+                        />
                     </div>
                 )}
             </div>

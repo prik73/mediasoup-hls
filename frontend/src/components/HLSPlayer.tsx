@@ -4,6 +4,7 @@ import { Button } from './ui/Button';
 
 interface HLSPlayerProps {
     playlistUrl: string;
+    onQualityMenuOpen?: () => void;
 }
 
 interface QualityLevel {
@@ -12,12 +13,13 @@ interface QualityLevel {
     width: number;
     bitrate: number;
     name: string;
+    onQualityMenuOpen?: () => void;
 }
 
 /**
  * Component for HLS video playback with quality selector
  */
-export default function HLSPlayer({ playlistUrl }: HLSPlayerProps) {
+export default function HLSPlayer({ playlistUrl, onQualityMenuOpen }: HLSPlayerProps) {
     const {
         videoRef,
         isPlaying,
@@ -108,7 +110,12 @@ export default function HLSPlayer({ playlistUrl }: HLSPlayerProps) {
                     <div className="absolute top-4 right-4 z-10">
                         <div className="relative">
                             <button
-                                onClick={() => setShowQualityMenu(!showQualityMenu)}
+                                onClick={() => {
+                                    setShowQualityMenu(!showQualityMenu);
+                                    if (!showQualityMenu && onQualityMenuOpen) {
+                                        onQualityMenuOpen();
+                                    }
+                                }}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900/90 hover:bg-black text-white rounded text-sm font-medium transition-colors border border-white/10"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,8 +182,8 @@ export default function HLSPlayer({ playlistUrl }: HLSPlayerProps) {
 
             {error && (
                 <div className={`mt-4 px-4 py-3 rounded-lg ${error.includes('No users')
-                        ? 'bg-blue-500/10 border border-blue-500 text-blue-500'
-                        : 'bg-red-500/10 border border-red-500 text-red-500'
+                    ? 'bg-blue-500/10 border border-blue-500 text-blue-500'
+                    : 'bg-red-500/10 border border-red-500 text-red-500'
                     }`}>
                     <div className="flex items-center gap-2">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
