@@ -22,26 +22,24 @@ export class FilterComplexBuilder {
         }
     }
     /**
-     * Single user: full screen (1280x720)
+     * Single user: 144p full screen (256x144)
      * Stream indices: [0:v:0] = first video stream, [0:a:0] = first audio stream
-     * Splits output for multi-quality encoding
      */
     static singleUser() {
         return `
-      [0:v:0]scale=1280:720[vtemp];
+      [0:v:0]scale=256:144[vtemp];
       [vtemp]copy[vout0];
       [0:a:0]acopy[aout0]
     `.trim();
     }
     /**
-     * Two users: side-by-side (640x360 each)
+     * Two users: side-by-side (128x144 each -> 256x144 total)
      * Stream indices: [0:v:0], [0:v:1] = first and second video streams
-     * Splits output for multi-quality encoding
      */
     static twoUsers() {
         return `
-      [0:v:0]scale=640:360[v0];
-      [0:v:1]scale=640:360[v1];
+      [0:v:0]scale=128:144[v0];
+      [0:v:1]scale=128:144[v1];
       [v0][v1]hstack[vtemp];
       [vtemp]copy[vout0];
       [0:a:0][0:a:1]amix=inputs=2:duration=longest[atemp];
@@ -49,17 +47,16 @@ export class FilterComplexBuilder {
     `.trim();
     }
     /**
-     * Three users: 2 on top, 1 centered on bottom (640x360 each)
-     * Bottom user is centered with black padding to prevent stretching
-     * Splits output for multi-quality encoding
+     * Three users: 2 on top (128x72 each), 1 centered on bottom (128x72)
+     * Total canvas: 256x144
      */
     static threeUsers() {
         return `
-      [0:v:0]scale=640:360[v0];
-      [0:v:1]scale=640:360[v1];
-      [0:v:2]scale=640:360[v2];
+      [0:v:0]scale=128:72[v0];
+      [0:v:1]scale=128:72[v1];
+      [0:v:2]scale=128:72[v2];
       [v0][v1]hstack[top];
-      [v2]pad=1280:360:(ow-iw)/2:0:black[v2_padded];
+      [v2]pad=256:72:(ow-iw)/2:0:black[v2_padded];
       [top][v2_padded]vstack[vtemp];
       [vtemp]copy[vout0];
       [0:a:0][0:a:1][0:a:2]amix=inputs=3:duration=longest[atemp];
@@ -67,15 +64,15 @@ export class FilterComplexBuilder {
     `.trim();
     }
     /**
-     * Four users: 2x2 grid (640x360 each)
-     * Splits output for multi-quality encoding
+     * Four users: 2x2 grid (128x72 each)
+     * Total canvas: 256x144
      */
     static fourUsers() {
         return `
-      [0:v:0]scale=640:360[v0];
-      [0:v:1]scale=640:360[v1];
-      [0:v:2]scale=640:360[v2];
-      [0:v:3]scale=640:360[v3];
+      [0:v:0]scale=128:72[v0];
+      [0:v:1]scale=128:72[v1];
+      [0:v:2]scale=128:72[v2];
+      [0:v:3]scale=128:72[v3];
       [v0][v1]hstack[top];
       [v2][v3]hstack[bottom];
       [top][bottom]vstack[vtemp];

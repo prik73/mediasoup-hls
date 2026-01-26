@@ -9,26 +9,23 @@ export declare class FilterComplexBuilder {
      */
     static build(userCount: number): string;
     /**
-     * Single user: full screen (1280x720)
+     * Single user: 144p full screen (256x144)
      * Stream indices: [0:v:0] = first video stream, [0:a:0] = first audio stream
-     * Splits output for multi-quality encoding
      */
     private static singleUser;
     /**
-     * Two users: side-by-side (640x360 each)
+     * Two users: side-by-side (128x144 each -> 256x144 total)
      * Stream indices: [0:v:0], [0:v:1] = first and second video streams
-     * Splits output for multi-quality encoding
      */
     private static twoUsers;
     /**
-     * Three users: 2 on top, 1 centered on bottom (640x360 each)
-     * Bottom user is centered with black padding to prevent stretching
-     * Splits output for multi-quality encoding
+     * Three users: 2 on top (128x72 each), 1 centered on bottom (128x72)
+     * Total canvas: 256x144
      */
     private static threeUsers;
     /**
-     * Four users: 2x2 grid (640x360 each)
-     * Splits output for multi-quality encoding
+     * Four users: 2x2 grid (128x72 each)
+     * Total canvas: 256x144
      */
     private static fourUsers;
 }

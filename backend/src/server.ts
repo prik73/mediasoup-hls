@@ -15,7 +15,7 @@ import { roomManager } from './state/RoomManager.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 async function main() {
     // Initialize Express app
@@ -33,7 +33,15 @@ async function main() {
     }));
 
     // Serve static files (HLS output)
-    app.use('/hls', express.static(path.join(__dirname, '../public/hls')));
+    app.use('/hls', express.static(path.join(__dirname, '../public/hls'), {
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith('.m3u8')) {
+                res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            } else if (filePath.endsWith('.ts')) {
+                res.set('Cache-Control', 'public, max-age=31536000'); // Cache segments forever
+            }
+        }
+    }));
 
     // Health check endpoint
     app.get('/health', (req, res) => {

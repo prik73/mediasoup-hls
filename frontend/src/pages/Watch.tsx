@@ -141,6 +141,11 @@ export default function Watch() {
                             </div>
                         )}
 
+                        {/* Challenge Message */}
+                        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/50 rounded-lg text-yellow-500 text-sm font-medium text-center">
+                            Default is 144p. Try changing the quality to upper and see the server crash :))) lol
+                        </div>
+
                         {/* HLS Player - key prop forces remount when hlsKey changes */}
                         <HLSPlayer key={hlsKey} playlistUrl={playlistUrl} />
                     </div>

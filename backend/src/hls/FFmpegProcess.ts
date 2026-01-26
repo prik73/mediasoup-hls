@@ -76,7 +76,7 @@ export class FFmpegProcess extends EventEmitter {
             // Error concealment for corrupt RTP packets
             '-err_detect', 'ignore_err',
             '-fflags', '+genpts+igndts',
-            '-threads', '0', // Auto-detect threads (use all cores)
+            '-threads', '1', // Optimized for t3.small (avoid context switching)
 
             // HLS variant stream settings
             '-f', 'hls',

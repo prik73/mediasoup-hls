@@ -26,7 +26,16 @@ async function main() {
         credentials: true,
     }));
     // Serve static files (HLS output)
-    app.use('/hls', express.static(path.join(__dirname, '../public/hls')));
+    app.use('/hls', express.static(path.join(__dirname, '../public/hls'), {
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith('.m3u8')) {
+                res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            }
+            else if (filePath.endsWith('.ts')) {
+                res.set('Cache-Control', 'public, max-age=31536000'); // Cache segments forever
+            }
+        }
+    }));
     // Health check endpoint
     app.get('/health', (req, res) => {
         res.json({ status: 'ok' });
@@ -34,8 +43,9 @@ async function main() {
     // Clean up previous HLS sessions and zombie processes
     await HLSManager.cleanupAll();
     // Auto-detect public IP for MediaSoup if not set (CRITICAL for AWS/VPS)
-    if (!process.env.MEDIASOUP_ANNOUNCED_IP) {
-        logger.info('Detecting public IP...');
+    // BUT: Skip if in development mode to force 127.0.0.1 for local testing
+    if (process.env.NODE_ENV === 'production' && !process.env.MEDIASOUP_ANNOUNCED_IP) {
+        logger.info('Detecting public IP (Production Mode)...');
         try {
             const https = await import('https');
             const publicIp = await new Promise((resolve, reject) => {
@@ -57,6 +67,11 @@ async function main() {
         catch (error) {
             logger.warn('Failed to auto-detect public IP, using default 127.0.0.1:', error);
         }
+    }
+    else if (!process.env.MEDIASOUP_ANNOUNCED_IP) {
+        logger.info('Development mode detected: Forcing announced IP to 127.0.0.1');
+        process.env.MEDIASOUP_ANNOUNCED_IP = '127.0.0.1';
+        mediasoupConfig.webRtcTransport.listenIps[0].announcedIp = '127.0.0.1';
     }
     // Initialize Mediasoup worker
     logger.info('Initializing Mediasoup worker...');

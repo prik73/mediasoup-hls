@@ -45,26 +45,26 @@ export class FFmpegProcess extends EventEmitter {
             '-filter_complex', this.filterComplex,
             // Map the single output
             '-map', '[vout0]', '-map', '[aout0]',
-            // 480p optimized variant (Single Stream)
+            // 144p Ultra-Minimal variant (Single Stream)
             '-c:v:0', 'libx264',
-            '-b:v:0', '1000k',
-            '-s:v:0', '854x480',
-            '-maxrate:v:0', '1200k',
-            '-bufsize:v:0', '2400k',
+            '-b:v:0', '250k',
+            '-s:v:0', '256x144',
+            '-maxrate:v:0', '350k',
+            '-bufsize:v:0', '700k',
             '-c:a:0', 'aac',
-            '-b:a:0', '96k',
+            '-b:a:0', '64k',
             '-ar:a:0', '48000',
-            // Performance settings for t3.small
-            '-r', '24',
+            // Performance settings for Ultra-Low CPU / Minimal Bandwidth
+            '-r', '15',
             '-preset', 'ultrafast',
             '-tune', 'zerolatency',
-            '-g', '48', // 2 second GOP at 24fps
-            '-keyint_min', '48',
+            '-g', '30', // 2 second GOP at 15fps
+            '-keyint_min', '30',
             '-sc_threshold', '0',
             // Error concealment for corrupt RTP packets
             '-err_detect', 'ignore_err',
             '-fflags', '+genpts+igndts',
-            '-threads', '2', // Limit threads to avoid context switching overhead
+            '-threads', '1', // Optimized for t3.small (avoid context switching)
             // HLS variant stream settings
             '-f', 'hls',
             '-hls_time', '2',
