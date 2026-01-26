@@ -49,43 +49,52 @@ export class FFmpegProcess extends EventEmitter {
             '-i', 'stream.sdp',
 
             // Apply filter complex to composite multiple users into grid layout
-            // This creates [vout0]/[vout1] (split video) and [aout0]/[aout1] (split audio)
+            // This creates [vout0]/[vout1]/[vout2]/[vout3] and [aout0]/[aout1]/[aout2]/[aout3]
             '-filter_complex', this.filterComplex,
 
-            // Map the single output
-            '-map', '[vout0]', '-map', '[aout0]',
+            // Map the split outputs for 4 quality variants
+            '-map', '[vout0]', '-map', '[aout0]',  // 720p
+            '-map', '[vout1]', '-map', '[aout1]',  // 480p
+            '-map', '[vout2]', '-map', '[aout2]',  // 360p
+            '-map', '[vout3]', '-map', '[aout3]',  // 144p
 
-            // 144p Ultra-Minimal variant (Single Stream)
-            '-c:v:0', 'libx264',
-            '-b:v:0', '250k',
-            '-s:v:0', '256x144',
-            '-maxrate:v:0', '350k',
-            '-bufsize:v:0', '700k',
-            '-c:a:0', 'aac',
-            '-b:a:0', '64k',
-            '-ar:a:0', '48000',
+            // 720p HD (High)
+            '-c:v:0', 'libx264', '-b:v:0', '2500k', '-s:v:0', '1280x720', '-maxrate:v:0', '3000k', '-bufsize:v:0', '6000k',
+            '-c:a:0', 'aac', '-b:a:0', '128k', '-ar:a:0', '48000',
 
-            // Performance settings for Ultra-Low CPU / Minimal Bandwidth
-            '-r', '15',
-            '-preset', 'ultrafast',
-            '-tune', 'zerolatency',
-            '-g', '30', // 2 second GOP at 15fps
-            '-keyint_min', '30',
-            '-sc_threshold', '0',
+            // 480p SD (Medium)
+            '-c:v:1', 'libx264', '-b:v:1', '1200k', '-s:v:1', '854x480', '-maxrate:v:1', '1500k', '-bufsize:v:1', '3000k',
+            '-c:a:1', 'aac', '-b:a:1', '96k', '-ar:a:1', '48000',
 
-            // Error concealment for corrupt RTP packets
+            // 360p LD (Low)
+            '-c:v:2', 'libx264', '-b:v:2', '800k', '-s:v:2', '640x360', '-maxrate:v:2', '1000k', '-bufsize:v:2', '2000k',
+            '-c:a:2', 'aac', '-b:a:2', '64k', '-ar:a:2', '48000',
+
+            // 144p Mobile (Data Saver)
+            '-c:v:3', 'libx264', '-b:v:3', '250k', '-s:v:3', '256x144', '-maxrate:v:3', '400k', '-bufsize:v:3', '800k',
+            '-c:a:3', 'aac', '-b:a:3', '48k', '-ar:a:3', '48000',
+
+            // Common encoding settings
+            '-r', '24',                 // Frame rate
+            '-preset', 'veryfast',      // Encoding speed vs compression
+            '-tune', 'zerolatency',     // Low latency tuning
+            '-g', '48',                 // GOP size (2 seconds at 24fps)
+            '-keyint_min', '48',
+            '-sc_threshold', '0',       // Disable scene change detection for consistent segments
+
+            // Error concealment
             '-err_detect', 'ignore_err',
             '-fflags', '+genpts+igndts',
-            '-threads', '0', // Auto-detect threads (use all cores)
+            '-threads', '0',
 
             // HLS variant stream settings
             '-f', 'hls',
             '-hls_time', '2',
-            '-hls_list_size', '10',
+            '-hls_list_size', '6',
             '-hls_flags', 'delete_segments+append_list+program_date_time+independent_segments',
 
-            // Single stream mapping
-            '-var_stream_map', 'v:0,a:0',
+            // Variant stream mapping
+            '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3',
             '-master_pl_name', 'playlist.m3u8',
             '-hls_segment_filename', 'v%v/segment-%03d.ts',
             'v%v/index.m3u8',

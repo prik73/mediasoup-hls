@@ -43,6 +43,7 @@ export default function HLSPlayer({ playlistUrl }: HLSPlayerProps) {
         if (hlsInstance) {
             const updateLevels = () => {
                 const levels = getQualityLevels();
+                console.log('[HLSPlayer] Loaded quality levels:', levels);
                 setQualityLevels(levels);
                 setCurrentQuality(getCurrentQuality());
             };
@@ -175,8 +176,8 @@ export default function HLSPlayer({ playlistUrl }: HLSPlayerProps) {
 
             {error && (
                 <div className={`mt-4 px-4 py-3 rounded-lg ${error.includes('No users')
-                        ? 'bg-blue-500/10 border border-blue-500 text-blue-500'
-                        : 'bg-red-500/10 border border-red-500 text-red-500'
+                    ? 'bg-blue-500/10 border border-blue-500 text-blue-500'
+                    : 'bg-red-500/10 border border-red-500 text-red-500'
                     }`}>
                     <div className="flex items-center gap-2">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">

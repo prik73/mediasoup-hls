@@ -105,8 +105,10 @@ export class HLSManager {
         const outputPath = path.join(hlsConfig.playlistDir, this.roomId);
         await fs.mkdir(outputPath, { recursive: true });
         // Create variant directories for multi-quality streaming
-        await fs.mkdir(path.join(outputPath, 'v0'), { recursive: true });
-        // Eco Mode: Only v0 is used
+        await fs.mkdir(path.join(outputPath, 'v0'), { recursive: true }); // 720p
+        await fs.mkdir(path.join(outputPath, 'v1'), { recursive: true }); // 480p
+        await fs.mkdir(path.join(outputPath, 'v2'), { recursive: true }); // 360p
+        await fs.mkdir(path.join(outputPath, 'v3'), { recursive: true }); // 144p
 
         // Generate filter complex for multi-user grid layout
         const filterComplex = FilterComplexBuilder.build(fullProducers.length);
@@ -121,7 +123,7 @@ export class HLSManager {
             plainTransports: new Map(),
             consumers: new Map(),
             sdpFilePath: '',
-            playlistPath: `${outputPath}/playlist.m3u8`,
+            playlistPath: `${outputPath}/index.m3u8`, // Point to master playlist
         };
 
         // Step 5: Connect PlainTransports (before consumers)
@@ -183,14 +185,20 @@ export class HLSManager {
         logger.info('FFmpeg ready. Resuming consumers and requesting keyframes...');
         await this.resumeAndRequestKeyframes(consumers);
 
-        // Manually write master playlist (Ultra-Minimal Mode: Single 144p Stream)
+        // Manually write master playlist
         const masterPlaylistContent = `#EXTM3U
 #EXT-X-VERSION:3
+#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720,NAME="720p"
+v0/index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=1200000,RESOLUTION=854x480,NAME="480p"
+v1/index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360,NAME="360p"
+v2/index.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=250000,RESOLUTION=256x144,NAME="144p"
-playlist.m3u8
+v3/index.m3u8
 `;
         await fs.writeFile(path.join(outputPath, 'index.m3u8'), masterPlaylistContent);
-        logger.info('Manually wrote index.m3u8 master playlist using flat structure (Ultra-Minimal 144p Mode)');
+        logger.info('Manually wrote index.m3u8 master playlist with 4 quality variants');
 
         // Step 10: Update pipeline state
         this.currentPipeline.plainTransports = plainTransports;

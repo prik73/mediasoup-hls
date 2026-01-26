@@ -30,8 +30,8 @@ export class FilterComplexBuilder {
     private static singleUser(): string {
         return `
       [0:v:0]scale=1280:720[vtemp];
-      [vtemp]copy[vout0];
-      [0:a:0]acopy[aout0]
+      [vtemp]split=4[vout0][vout1][vout2][vout3];
+      [0:a:0]asplit=4[aout0][aout1][aout2][aout3]
     `.trim();
     }
 
@@ -45,9 +45,9 @@ export class FilterComplexBuilder {
       [0:v:0]scale=640:360[v0];
       [0:v:1]scale=640:360[v1];
       [v0][v1]hstack[vtemp];
-      [vtemp]copy[vout0];
+      [vtemp]split=4[vout0][vout1][vout2][vout3];
       [0:a:0][0:a:1]amix=inputs=2:duration=longest[atemp];
-      [atemp]acopy[aout0]
+      [atemp]asplit=4[aout0][aout1][aout2][aout3]
     `.trim();
     }
 
@@ -64,9 +64,9 @@ export class FilterComplexBuilder {
       [v0][v1]hstack[top];
       [v2]pad=1280:360:(ow-iw)/2:0:black[v2_padded];
       [top][v2_padded]vstack[vtemp];
-      [vtemp]copy[vout0];
+      [vtemp]split=4[vout0][vout1][vout2][vout3];
       [0:a:0][0:a:1][0:a:2]amix=inputs=3:duration=longest[atemp];
-      [atemp]acopy[aout0]
+      [atemp]asplit=4[aout0][aout1][aout2][aout3]
     `.trim();
     }
 
@@ -83,9 +83,9 @@ export class FilterComplexBuilder {
       [v0][v1]hstack[top];
       [v2][v3]hstack[bottom];
       [top][bottom]vstack[vtemp];
-      [vtemp]copy[vout0];
+      [vtemp]split=4[vout0][vout1][vout2][vout3];
       [0:a:0][0:a:1][0:a:2][0:a:3]amix=inputs=4:duration=longest[atemp];
-      [atemp]acopy[aout0]
+      [atemp]asplit=4[aout0][aout1][aout2][aout3]
     `.trim();
     }
 }
