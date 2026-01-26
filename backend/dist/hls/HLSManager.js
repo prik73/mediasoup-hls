@@ -84,10 +84,8 @@ export class HLSManager {
         const plainTransports = await this.createPlainTransports(userPorts);
         // Step 4: Start FFmpeg process
         const outputPath = path.join(hlsConfig.playlistDir, this.roomId);
-        await fs.mkdir(outputPath, { recursive: true });
         // Create variant directories for multi-quality streaming
-        await fs.mkdir(path.join(outputPath, 'v0'), { recursive: true });
-        // Eco Mode: Only v0 is used
+        await fs.mkdir(path.join(outputPath, 'v0'), { recursive: true }); // 144p only
         // Generate filter complex for multi-user grid layout
         const filterComplex = FilterComplexBuilder.build(fullProducers.length);
         logger.info(`Generated filter complex for ${fullProducers.length} user(s)`);
@@ -146,10 +144,10 @@ export class HLSManager {
         const masterPlaylistContent = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-STREAM-INF:BANDWIDTH=250000,RESOLUTION=256x144,NAME="144p"
-playlist.m3u8
+v0/index.m3u8
 `;
-        await fs.writeFile(path.join(outputPath, 'index.m3u8'), masterPlaylistContent);
-        logger.info('Manually wrote index.m3u8 master playlist using flat structure (Ultra-Minimal 144p Mode)');
+        await fs.writeFile(path.join(outputPath, 'playlist.m3u8'), masterPlaylistContent);
+        logger.info('Manually wrote playlist.m3u8 master playlist using flat structure (Ultra-Minimal 144p Mode)');
         // Step 10: Update pipeline state
         this.currentPipeline.plainTransports = plainTransports;
         this.currentPipeline.consumers = consumers;

@@ -86,7 +86,6 @@ export class FFmpegProcess extends EventEmitter {
 
             // Single stream mapping
             '-var_stream_map', 'v:0,a:0',
-            '-master_pl_name', 'playlist.m3u8',
             '-hls_segment_filename', 'v%v/segment-%03d.ts',
             'v%v/index.m3u8',
         ];
