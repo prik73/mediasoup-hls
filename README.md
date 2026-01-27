@@ -1,242 +1,165 @@
-# WebRTC + HLS Streaming Application
+# Mediasoup SFU & HLS Streaming Server
 
-A full-stack application for real-time video streaming using WebRTC (Mediasoup) and HLS playback.
+This project is a robust, scalable SFU (Selective Forwarding Unit) backend using **Mediasoup** and **Socket.IO**, coupled with a React frontend. It manages real-time audio/video rooms and outputs a low-latency HLS stream via FFmpeg.
 
-## Features
+## 🚀 Key Features
 
-- **WebRTC Streaming** (`/stream`): 2-4 users can stream video/audio in real-time
-- **HLS Playback** (`/watch`): Viewers can watch the live stream via HLS with 5-10s latency
-- **Automatic Grid Layout**: FFmpeg dynamically creates grid layouts for 1-4 users
-- **Graceful Restart**: HLS pipeline restarts smoothly when users join/leave
-- **Keyframe Retry**: Fast HLS startup with automatic keyframe requests
+- **Real-time WebRTC**: Low-latency video conferencing for up to 5-8 peers.
+- **HLS Broadcast**: Live streaming to unlimited passive viewers via HLS (HTTP Live Streaming).
+- **144p Optimization**: Specialized "Low Bandwidth" mode featuring:
+    - Direct FFmpeg scaling to 144p.
+    - Single-core thread pinning for stable performance on `t3.small` instances.
+    - Minimal resource footprint.
+- **Robust Signaling**: Type-safe Socket.IO implementation with strict state management.
+- **Auto-Healing Pipeline**: Automatic keyframe requests and process recovery for glitch-free HLS.
 
-## Architecture
+---
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│   /stream   │────▶│  Mediasoup   │────▶│   /watch    │
-│  (WebRTC)   │     │   (Router)   │     │   (HLS)     │
-└─────────────┘     └──────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │ HLS Pipeline │
-                    │   (FFmpeg)   │
-                    └──────────────┘
-```
+## 🏗️ Architecture
 
-## Prerequisites
+The system is composed of two main parts: the **Signaling/Media Server** (Backend) and the **Client Application** (Frontend).
 
-- **Node.js** 18+ 
-- **FFmpeg** with libx264 and aac support
-- **Modern browser** with WebRTC support
+### Request/Response Signaling Cycle
 
-### Install FFmpeg
+The backend enforces a strict request/response cycle for all signaling events to ensure state consistency.
+
+| Event | Direction | Description | Typical Response |
+| :--- | :--- | :--- | :--- |
+| `createRoom` | Client → Server | Create a new media room | `{ roomId }` |
+| `joinRoom` | Client → Server | Join an existing media room | `{ roomId, rtpCapabilities }` |
+| `createProducerTransport` | Client → Server | Request a transport for sending media | `{ id, iceParameters, ... }` |
+| `connectProducerTransport` | Client → Server | DTLS handshake for producer transport | `{ connected: true }` |
+| `produce` | Client → Server | Start sending a media track | `{ id: producerId }` |
+| `createConsumerTransport` | Client → Server | Request a transport for receiving media | `{ id, iceParameters, ... }` |
+| `consume` | Client → Server | Create a consumer for a remote producer | Consumer parameters |
+| `roomProducersChanged` | Server → Client | Notification of new/removed producers | *Event only* |
+
+### Why Maintain Execution Order (Pipeline)?
+
+**The correct execution order is critical for a robust SFU-HLS pipeline**. For media and HLS output to work without glitches, resource leaks, or race conditions, each step must be performed in a strict sequence:
+
+#### Summary: Why This Pipeline is Robust
+
+*   **Strict resource cleanup** prevents leaks and port conflicts.
+*   **Atomic state changes** avoid race conditions, even with concurrent join/leave or produce/stop events.
+*   **Strict port allocation and SDP writing order** ensures FFmpeg and Mediasoup always agree on stream layout.
+*   **Keyframe request retries** guarantee immediate, glitch-free HLS startup.
+*   **All signaling events** are request/response and type-safe, minimizing protocol drift and client/server desync.
+
+#### Detailed HLS Pipeline Steps
+
+To ensure robustness and avoid race conditions (like "black video" or stuck processes), the system follows this strict atomic sequence during every room restart:
+
+1.  **Cleanup Old State**
+    Terminate any existing FFmpeg process and close old Mediasoup transports. This frees up UDP ports and CPU resources.
+
+2.  **Allocate Ports**
+    Assign unique RTP/RTCP ports for the new set of users. These ports are reserved before anything else starts.
+
+3.  **Create Transports & Connect**
+    Create Mediasoup `PlainTransports` and immediately `connect()` them to the allocated local ports.
+    *Note: At this stage, no media flows yet because consumers haven't been created.*
+
+4.  **Create Consumers (Paused)**
+    Create consumers for each user's video/audio tracks, but keep them **PAUSED**.
+    *Why?* This ensures we have the track metadata to generate a valid SDP, but we don't flood the UDP ports until FFmpeg is listening.
+
+5.  **Generate SDP**
+    Write a tailored SDP file that describes exactly which codecs and SSRCs FFmpeg should expect on which ports.
+
+6.  **Launch FFmpeg**
+    Spawn the FFmpeg process using the generated SDP. It instantly binds to the allocated ports.
+
+7.  **Resume & Request Keyframes**
+    Once FFmpeg is running, we **resume** the consumers. Data begins to flow.
+    We immediately send a `requestKeyFrame` command (with retries) to force a fresh video frame, ensuring instant playback start.
+
+8.  **Update State**
+    Mark the pipeline as active.
+
+> **Robustness Note**: Unlike some implementations that connect transports *after* FFmpeg starts, we use a **"Connect then Resume"** pattern. By creating consumers in a `paused` state, we prepare the entire topology without dropping a single packet, then "open the floodgates" only when the transcoder is ready.
+
+---
+
+## 🛠️ Setup & Installation
+
+### Prerequisites
+- **Node.js** 18+
+- **FFmpeg** (v4+ with libx264/aac support)
+- **Docker** (Optional, for containerized run)
+
+### Local Development
+
+1.  **Clone the repository**
+    ```bash
+    git clone <repo-url>
+    cd media-soup
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    cd backend && npm install
+    cd ../frontend && npm install
+    ```
+
+3.  **Start Services**
+    *In terminal 1 (Backend):*
+    ```bash
+    cd backend
+    # Create necessary HLS directory
+    mkdir -p public/hls
+    npm run dev
+    ```
+    *In terminal 2 (Frontend):*
+    ```bash
+    cd frontend
+    npm run dev
+    ```
+
+4.  **Access App**
+    - Frontend: `http://localhost:5173`
+    - Backend API: `http://localhost:3000`
+
+### Docker Deployment
+
+For production (or testing the `144p` optimization), use Docker Compose.
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install ffmpeg
-
-# macOS
-brew install ffmpeg
-
-# Verify installation
-ffmpeg -version
+# Build and run
+docker compose up --build -d
 ```
 
-## Installation
+> **Note**: The `docker-compose.yml` is configured to use `network_mode: host` to simplify WebRTC port management.
 
-1. **Clone and navigate to project**
-```bash
-cd media-soup
-```
+---
 
-2. **Install dependencies**
-```bash
-# Install root dependencies
-npm install
+## 🔧 144p Optimization Details
 
-# Install backend dependencies
-cd backend && npm install && cd ..
+This branch (`144p-quality`) implements specific optimizations for low-resource environments (like AWS `t3.small`):
 
-# Install frontend dependencies  
-cd frontend && npm install && cd ..
-```
+- **Filter Complex**: Layouts are calculated to result in a native **256x144** output canvas.
+- **Thread Pinning**: FFmpeg is forced to run with `-threads 1`. This reduces context switching overhead on small CPUs, as 144p encoding is lightweight enough for a single thread.
+- **Direct Scaling**: Inputs are downscaled immediately upon ingress (`scale=128:72`) before being composed, drastically reducing memory bandwidth.
 
-## Running the Application
-
-### Option 1: Run both frontend and backend together
-```bash
-npm run dev
-```
-
-### Option 2: Run separately
-
-**Terminal 1 - Backend:**
-```bash
-cd backend
-npm run dev
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-The application will be available at:
-- **Frontend**: http://localhost:5173
-- **Backend**: http://localhost:3000
-- **HLS files**: http://localhost:3000/hls
-
-## Usage
-
-### Streaming (Producer)
-
-1. Open http://localhost:5173/stream
-2. Allow camera and microphone permissions
-3. Click **"Start Streaming"**
-4. Note the **Room ID** displayed
-5. Share the Room ID with others to join
-
-### Watching (Consumer)
-
-1. Open http://localhost:5173/watch
-2. Enter the **Room ID** from a streaming session
-3. Click **"Start Watching"**
-4. The HLS stream will start playing (5-10s latency)
-
-### Testing with Multiple Users
-
-1. **User 1**: Open `/stream` in normal browser window
-2. **User 2**: Open `/stream` in incognito/private window
-3. **Viewer**: Open `/watch` in another tab and enter the Room ID
-
-## Project Structure
+## 📁 Project Structure
 
 ```
-media-soup/
-├── backend/                     # Node.js + TypeScript
+.
+├── backend/
 │   ├── src/
-│   │   ├── server.ts           # Express + Socket.IO entry
-│   │   ├── config/             # Mediasoup configuration
-│   │   ├── mediasoup/          # Worker, router, transport
-│   │   ├── hls/                # HLS pipeline (FFmpeg)
-│   │   ├── signaling/          # Socket.IO handlers
-│   │   ├── state/              # Room management
-│   │   └── utils/              # Logger, errors
-│   └── public/hls/             # Generated HLS files
-│
-├── frontend/                    # Vite + React + TypeScript
+│   │   ├── hls/           # FFmpeg process & SDP generation
+│   │   ├── mediasoup/     # Router & Worker management
+│   │   ├── signaling/     # Socket.IO event handlers
+│   │   └── server.ts      # Entry point
+│   └── public/hls/        # HLS segments storage
+├── frontend/
 │   ├── src/
-│   │   ├── pages/              # Stream, Watch
-│   │   ├── hooks/              # useMediasoup, useHLS
-│   │   ├── components/         # MediaControls, VideoGrid
-│   │   └── utils/              # Logger
-│
-└── package.json                # Monorepo root
+│   │   ├── components/    # UI Components (HLSPlayer, etc.)
+│   │   ├── hooks/         # Mediasoup & Socket logic
+│   │   └── pages/         # Stream & Watch pages
+└── docker-compose.yml
 ```
 
-## Key Technologies
-
-**Backend:**
-- Mediasoup (WebRTC SFU)
-- Express + Socket.IO (Signaling)
-- FFmpeg (HLS transcoding)
-- TypeScript
-
-**Frontend:**
-- React + Vite
-- mediasoup-client (WebRTC)
-- HLS.js (Video playback)
-- Socket.IO client
-
-## How It Works
-
-### WebRTC Flow (/stream)
-
-1. Client connects via Socket.IO
-2. Creates/joins a room
-3. Gets router RTP capabilities
-4. Creates producer transport (DTLS handshake)
-5. Produces video and audio tracks
-6. Server adds producer to room
-
-### HLS Pipeline
-
-1. When producers join, server:
-   - Allocates RTP/RTCP ports
-   - Creates PlainTransports
-   - Generates SDP file
-   - Starts FFmpeg with grid layout
-   - Creates consumers for each producer
-   - Requests keyframes for fast startup
-
-2. FFmpeg outputs HLS segments to `/public/hls/{roomId}/`
-
-3. Viewers load `playlist.m3u8` via HLS.js
-
-### Grid Layouts
-
-- **1 user**: Full screen (1280x720)
-- **2 users**: Side-by-side (640x720 each)
-- **3 users**: 2 top + 1 bottom (640x360 grid)
-- **4 users**: 2x2 grid (640x360 each)
-
-## Troubleshooting
-
-### FFmpeg not found
-```bash
-# Verify FFmpeg is in PATH
-which ffmpeg
-
-# If not, install FFmpeg (see Prerequisites)
-```
-
-### Port already in use
-```bash
-# Change ports in:
-# - backend/src/server.ts (PORT)
-# - frontend/src/hooks/useMediasoup.ts (SOCKET_URL)
-```
-
-### Camera/Microphone not working
-- Ensure HTTPS or localhost (required for getUserMedia)
-- Check browser permissions
-- Try different browser (Chrome/Firefox recommended)
-
-### HLS stream not playing
-- Wait 5-10 seconds for FFmpeg to start
-- Check browser console for errors
-- Verify FFmpeg is running: `ps aux | grep ffmpeg`
-- Check HLS files exist: `ls backend/public/hls/{roomId}/`
-
-## Performance
-
-- **2-3 users**: ~40-80% CPU (single core)
-- **4 users**: ~80-100% CPU
-- **5+ users**: Consider hardware encoding (NVENC) or architecture change
-
-## Limitations
-
-- Optimized for 2-4 concurrent streamers
-- HLS has 5-10 second latency (inherent to HLS)
-- No authentication or room security
-- Single server (no horizontal scaling)
-
-## Future Improvements
-
-- [ ] Active speaker detection
-- [ ] Multiple HLS quality levels (ABR)
-- [ ] Recording individual streams
-- [ ] Redis for state management (horizontal scaling)
-- [ ] Low-latency HLS (LL-HLS)
-- [ ] Authentication and room passwords
-
-## License
-
+## 📜 License
 ISC
-
-## Author
-
-Built for Fermion assignment
